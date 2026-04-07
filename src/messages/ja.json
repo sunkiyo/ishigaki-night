@@ -44,5 +44,18 @@
   },
   "advertise": {
     "label": "ADVERTISE"
+  },
+  "about": {
+    "label": "ABOUT",
+    "title": "ISHIGAKI NIGHTとは",
+    "subtitle": "石垣島のナイトライフを、もっと多くの人へ届けるメディア",
+    "section1Title": "石垣島の夜を、世界へ",
+    "section1Body": "ISHIGAKI NIGHTは、石垣島のバー・居酒屋・ライブハウス・クラブなどナイトスポット情報を日本語・英語・中国語・韓国語の4言語で発信するWebメディアです。観光客が「今夜どこへ行こう」と迷わないよう、リアルな島の夜の情報を届けます。",
+    "section2Title": "フリーペーパーとの連携",
+    "section2Body": "ISHIGAKI NIGHTは石垣島で配布されるフリーペーパー「石垣夜話」とも連携しています。空港・ホテル・観光施設に設置されたフリーペーパーからQRコードでWebサイトへアクセスでき、紙とデジタルの両面から島の夜を案内します。",
+    "section3Title": "掲載・広告のご案内",
+    "section3Body": "ISHIGAKI NIGHTへの店舗掲載・バナー広告・クーポン掲載など、各種プランをご用意しています。お店のPRをご希望の方は、お気軽にお問い合わせください。",
+    "contactButton": "掲載・広告のお問い合わせ",
+    "contactEmail": "info@ishigaki-night.com"
   }
 }

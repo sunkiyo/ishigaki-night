@@ -44,5 +44,18 @@
   },
   "advertise": {
     "label": "게재 안내"
+  },
+  "about": {
+    "label": "어바웃",
+    "title": "ISHIGAKI NIGHT 소개",
+    "subtitle": "이시가키 섬의 나이트라이프를 더 많은 사람에게 전하는 미디어",
+    "section1Title": "이시가키의 밤을 세계로",
+    "section1Body": "ISHIGAKI NIGHT는 이시가키 섬의 바·이자카야·라이브 하우스·클럽 등 나이트 스팟 정보를 일본어·영어·중국어·한국어 4개 언어로 발신하는 웹 미디어입니다. 관광객이 '오늘 밤 어디 갈까'로 고민하지 않도록 리얼한 섬의 밤 정보를 전달합니다.",
+    "section2Title": "프리페이퍼와의 연계",
+    "section2Body": "ISHIGAKI NIGHT는 이시가키 섬에서 배포되는 프리페이퍼 '이시가키 야바나시'와도 연계하고 있습니다. 공항·호텔·관광시설에 비치된 프리페이퍼의 QR코드로 웹사이트에 접속할 수 있어, 종이와 디지털 양면에서 섬의 밤을 안내합니다.",
+    "section3Title": "게재 및 광고 안내",
+    "section3Body": "ISHIGAKI NIGHT에 점포 게재·배너 광고·쿠폰 게재 등 다양한 플랜을 마련하고 있습니다. 홍보를 원하시는 분은 부담 없이 문의해 주세요.",
+    "contactButton": "게재·광고 문의하기",
+    "contactEmail": "info@ishigaki-night.com"
   }
 }

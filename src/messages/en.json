@@ -44,5 +44,18 @@
   },
   "advertise": {
     "label": "ADVERTISE"
+  },
+  "about": {
+    "label": "ABOUT",
+    "title": "About ISHIGAKI NIGHT",
+    "subtitle": "A media platform bringing Ishigaki's nightlife to the world",
+    "section1Title": "Ishigaki's Night, for the World",
+    "section1Body": "ISHIGAKI NIGHT is a web media platform covering bars, izakayas, live houses, and clubs on Ishigaki Island — in Japanese, English, Chinese, and Korean. We make sure tourists never have to wonder where to go tonight.",
+    "section2Title": "Collaboration with Free Paper",
+    "section2Body": "ISHIGAKI NIGHT partners with 'Ishigaki Yabanashi,' a free paper distributed across the island. QR codes in the free paper link directly to our website, combining print and digital to guide visitors through Ishigaki's nights.",
+    "section3Title": "Listing & Advertising",
+    "section3Body": "We offer various plans including spot listings, banner ads, and coupon features on ISHIGAKI NIGHT. If you'd like to promote your venue, please get in touch.",
+    "contactButton": "Contact Us for Listing & Ads",
+    "contactEmail": "info@ishigaki-night.com"
   }
 }

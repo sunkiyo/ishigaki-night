@@ -44,5 +44,18 @@
   },
   "advertise": {
     "label": "刊登廣告"
+  },
+  "about": {
+    "label": "關於我們",
+    "title": "關於 ISHIGAKI NIGHT",
+    "subtitle": "將石垣島夜生活傳遞給更多人的媒體平台",
+    "section1Title": "石垣島的夜，走向世界",
+    "section1Body": "ISHIGAKI NIGHT 是一個以日語、英語、中文、韓語四種語言介紹石垣島酒吧、居酒屋、現場演出場所及夜店等夜間景點資訊的網路媒體。讓每位遊客都能輕鬆找到今晚的去處。",
+    "section2Title": "與免費刊物的合作",
+    "section2Body": "ISHIGAKI NIGHT 與石垣島發行的免費刊物「石垣夜話」合作。刊物上的QR碼可直接連結至網站，透過紙本與數位雙管齊下，引導旅客探索石垣島的夜晚。",
+    "section3Title": "刊登與廣告方案",
+    "section3Body": "我們提供店家刊登、橫幅廣告、優惠券等多種方案。歡迎有意宣傳的店家與我們聯繫。",
+    "contactButton": "洽詢刊登與廣告",
+    "contactEmail": "info@ishigaki-night.com"
   }
 }
