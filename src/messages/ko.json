@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "spots":     "스팟",
+    "events":    "이벤트",
+    "dashboard": "수요 예측",
+    "advertise": "게재 안내"
+  },
+  "home": {
+    "heroTitle":    "이시가키의 밤을\n더 많은 사람에게.",
+    "heroSubtitle": "바·이자카야·라이브 하우스——이시가키 섬의 나이트라이프를 4개 언어로 전합니다.",
+    "findSpots":    "스팟 찾기",
+    "viewDashboard":"수요 예측 보기",
+    "demandLabel":  "수요 지수",
+    "demandTitle":  "이번 주 이시가키 혼잡도",
+    "spotsLabel":   "스팟",
+    "spotsTitle":   "추천 스팟",
+    "eventsLabel":  "이벤트",
+    "eventsTitle":  "최근 이벤트",
+    "viewAll":      "전체 보기"
+  },
+  "spots": {
+    "label":     "스팟",
+    "title":     "스팟 목록",
+    "subtitle":  "카테고리·지역으로 이시가키 섬의 바·이자카야·라이브 하우스를 검색",
+    "results":   "건",
+    "noResults": "해당하는 스팟이 없습니다"
+  },
+  "spotDetail": {
+    "address":   "주소",
+    "hours":     "영업 시간",
+    "phone":     "전화",
+    "instagram": "Instagram"
+  },
+  "events": {
+    "label":     "이벤트",
+    "title":     "이벤트 정보",
+    "subtitle":  "이시가키 섬의 라이브·DJ 이벤트·페스티벌",
+    "noEvents":  "가까운 이벤트가 없습니다"
+  },
+  "dashboard": {
+    "label":    "수요 예측",
+    "title":    "수요 예측 대시보드",
+    "subtitle": "이시가키 나이트라이프 수요 지수"
+  },
+  "advertise": {
+    "label": "게재 안내"
+  }
+}

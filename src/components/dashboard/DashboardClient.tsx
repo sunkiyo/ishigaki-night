@@ -1,0 +1,249 @@
+'use client'
+
+// ダッシュボードの既存HTMLロジックをReactコンポーネントとして移植
+// 詳細実装は ishigaki_dashboard_v4.html を参照し、Chart.jsを react-chartjs-2 経由で使用
+
+import { useEffect, useState } from 'react'
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, PointElement, LineElement,
+  BarElement, ArcElement, Filler, Tooltip, Legend,
+  type ChartData,
+} from 'chart.js'
+import { Bar } from 'react-chartjs-2'
+import type { DemandEntry } from '@/lib/demand'
+import type { YearData } from '@/lib/visitorData'
+import { getStatus } from '@/lib/demand'
+import { getLatestYear, wareki, MONTHS_JA, MONTHS_EN } from '@/lib/visitorData'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Filler, Tooltip, Legend)
+
+const STATUS_CONFIG = {
+  hot:    { label: { ja: '激混み', en: 'Peak',     zh: '超热' }, color: '#f05350' },
+  warm:   { label: { ja: 'にぎわい', en: 'Busy',   zh: '热闹' }, color: '#f0b865' },
+  normal: { label: { ja: '普通',   en: 'Moderate', zh: '一般' }, color: '#3ec768' },
+  cool:   { label: { ja: '閑散',   en: 'Slow',     zh: '安静' }, color: '#4ea8f5' },
+}
+
+function gaugeColor(idx: number) {
+  if (idx >= 75) return '#f05350'
+  if (idx >= 55) return '#d4923f'
+  if (idx >= 35) return '#3ec768'
+  return '#4ea8f5'
+}
+
+type Props = {
+  history: DemandEntry[]
+  officialData: Record<number, YearData>
+  lang: string
+}
+
+export default function DashboardClient({ history, officialData, lang }: Props) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  const latest = history[history.length - 1]
+  const idx    = latest?.index ?? 0
+  const status = getStatus(idx)
+  const cfg    = STATUS_CONFIG[status]
+  const color  = gaugeColor(idx)
+  const lbl    = cfg.label[lang as 'ja' | 'en' | 'zh'] ?? cfg.label.ja
+  const months = lang === 'en' ? MONTHS_EN : MONTHS_JA
+
+  const latestY = getLatestYear()
+  const cur     = officialData[latestY]
+  const prevY   = officialData[latestY - 1]
+
+  if (!mounted) return <div className="h-96 flex items-center justify-center text-stone-400 text-sm">Loading...</div>
+
+  return (
+    <div className="flex flex-col gap-5">
+
+      {/* HERO BAND */}
+      <div className="grid md:grid-cols-3 gap-4">
+
+        {/* スコアカード */}
+        <div className="bg-surface border border-stone-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+          <p className="text-xs tracking-widest uppercase text-stone-400 mb-3">
+            {lang === 'ja' ? '今週の需要指数' : lang === 'zh' ? '本週需求指數' : 'This Week'}
+          </p>
+          <div className="text-7xl font-bold leading-none mb-2" style={{ color, fontVariantNumeric: 'tabular-nums' }}>
+            {idx}
+          </div>
+          <p className="text-xs text-stone-400 mb-3">/ 100</p>
+          <span
+            className="text-sm font-semibold px-4 py-1 rounded-full"
+            style={{ color: cfg.color, background: cfg.color + '22', border: `1px solid ${cfg.color}44` }}
+          >
+            {lbl}
+          </span>
+        </div>
+
+        {/* ゲージ */}
+        <div className="bg-surface border border-stone-200 rounded-xl p-6 flex flex-col justify-between">
+          <div>
+            <p className="text-xs font-medium text-stone-600 mb-1">
+              {lang === 'ja' ? '需要レベル' : 'Demand Level'}
+            </p>
+            <p className="text-xs text-stone-400 mb-4">
+              {lang === 'ja' ? '3つのデータを組み合わせて算出' : 'Calculated from 3 data sources'}
+            </p>
+            <div className="h-2.5 rounded-full overflow-hidden mb-1" style={{ background: 'rgba(26,18,8,.08)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-1000"
+                style={{
+                  width: `${idx}%`,
+                  background: 'linear-gradient(90deg,#3ec768 0%,#d4923f 55%,#f05350 100%)',
+                  backgroundSize: '300px 10px',
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-stone-400">
+              <span>{lang === 'ja' ? '静か' : 'Quiet'}</span>
+              <span>{lang === 'ja' ? '激混み' : 'Peak'}</span>
+            </div>
+          </div>
+          {/* 3本バー */}
+          <div className="flex flex-col gap-3 mt-4">
+            {[
+              { icon: '🔍', label: lang === 'ja' ? 'グーグル検索' : 'Google Trends', val: latest?.trends ?? 0, max: 50, pt: Math.round((latest?.trends ?? 0) * 0.5), color: '#4ea8f5' },
+              { icon: '🏨', label: lang === 'ja' ? 'ホテル埋まり' : 'Hotel Vacancy',  val: latest?.hotel != null ? 100 - latest.hotel : 0, max: 30, pt: Math.round((latest?.hotel != null ? 100 - latest.hotel : 0) * 0.3), color: '#d4923f' },
+              { icon: '✈️', label: lang === 'ja' ? '飛行機の値段' : 'Flight Price',   val: latest?.flight ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200)) : 0, max: 20, pt: Math.round((latest?.flight ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200)) : 0) * 0.2), color: '#3ec768' },
+            ].map((b) => (
+              <div key={b.label}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span style={{ fontSize: 13 }}>{b.icon}</span>
+                  <span className="text-xs text-stone-500 flex-1">{b.label}</span>
+                  <span className="text-xs font-semibold text-stone-600">{b.pt}<span className="text-stone-400 font-normal"> / {b.max}pt</span></span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(26,18,8,.08)' }}>
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(b.val / 100) * 100}%`, background: b.color }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 推奨アクション */}
+        <div className="bg-surface border border-stone-200 rounded-xl p-6">
+          <p className="text-xs tracking-widest uppercase text-gold mb-4">
+            {lang === 'ja' ? '今週やること' : 'This Week'}
+          </p>
+          {(status === 'hot' ? [
+            ['🎵', lang === 'ja' ? 'DJイベント・ライブ開催推奨' : 'Host DJ events & live music'],
+            ['👥', lang === 'ja' ? 'スタッフ増員・仕入れ増量' : 'Increase staff & stock'],
+            ['📱', lang === 'ja' ? 'SNS告知を最大化' : 'Maximize SNS promotions'],
+          ] : status === 'warm' ? [
+            ['📣', lang === 'ja' ? 'SNS積極発信・特別メニュー' : 'Active SNS + specials'],
+            ['🌐', lang === 'ja' ? 'インバウンド向けコンテンツ' : 'Multilingual content push'],
+            ['🎟', lang === 'ja' ? 'イベントを事前告知' : 'Pre-promote events'],
+          ] : status === 'normal' ? [
+            ['🎫', lang === 'ja' ? 'クーポン・割引で集客強化' : 'Launch coupons & discounts'],
+            ['📍', lang === 'ja' ? '地元客向けイベント' : 'Target local residents'],
+            ['💰', lang === 'ja' ? 'SNS広告を出すタイミング' : 'Good timing for paid ads'],
+          ] : [
+            ['🕐', lang === 'ja' ? '短縮営業・休業を検討' : 'Consider reduced hours'],
+            ['📸', lang === 'ja' ? 'コンテンツ制作に活用' : 'Create content for later'],
+            ['📊', lang === 'ja' ? '次の繁忙期の準備' : 'Prep for next peak'],
+          ]).map(([icon, text]) => (
+            <div key={text as string} className="flex items-start gap-3 py-2 border-b border-stone-100 last:border-0">
+              <span className="text-sm mt-0.5" style={{ fontSize: 14 }}>{icon}</span>
+              <span className="text-xs text-stone-600 leading-relaxed">{text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 来島者数グラフ */}
+      <div className="bg-surface border border-stone-200 rounded-xl p-5">
+        <p className="text-sm font-medium text-stone-700 mb-1">
+          {lang === 'ja' ? `月別来島者数・内訳・予測（${wareki(latestY)}）` : `Monthly Visitors — Air/Sea/Forecast (${latestY})`}
+        </p>
+        <p className="text-xs text-stone-400 mb-4">
+          {lang === 'ja' ? '出典：石垣市観光文化課「入域観光推計」' : 'Source: Ishigaki City Tourism Division'}
+        </p>
+        <div style={{ height: 280 }}>
+          <Bar
+            data={{
+              labels: months,
+              datasets: [
+                {
+                  type: 'line' as const,
+                  label: lang === 'ja' ? `${wareki(latestY - 1).replace('年', '')}年` : String(latestY - 1),
+                  data: prevY?.visitors ?? [],
+                  borderColor: 'rgba(107,117,133,.55)',
+                  borderWidth: 1.5,
+                  order: 2,
+                },
+                {
+                  label: lang === 'ja' ? '空路（飛行機）' : 'Air',
+                  data: cur.air,
+                  backgroundColor: 'rgba(78,168,245,.75)',
+                  stack: 'visitor',
+                  order: 4,
+                },
+                {
+                  label: lang === 'ja' ? '海路（クルーズ）' : 'Sea',
+                  data: cur.sea,
+                  backgroundColor: 'rgba(45,212,191,.75)',
+                  stack: 'visitor',
+                  order: 4,
+                },
+              ],
+            } as ChartData<'bar'>}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#faf5ee',
+                  borderColor: 'rgba(192,112,40,.2)',
+                  borderWidth: 1,
+                  titleColor: '#2d1f0e',
+                  bodyColor: '#7a6048',
+                },
+              },
+              scales: {
+                x: { stacked: true, ticks: { color: '#a89070', font: { size: 9 } }, grid: { color: 'rgba(26,18,8,.05)' } },
+                y: { stacked: false, ticks: { color: '#a89070', font: { size: 9 }, callback: (v) => `${Math.round(Number(v) / 10000)}万` }, grid: { color: 'rgba(26,18,8,.05)' } },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+      {/* 需要指数履歴 */}
+      <div className="bg-surface border border-stone-200 rounded-xl p-5">
+        <p className="text-sm font-medium text-stone-700 mb-4">
+          {lang === 'ja' ? '需要指数 過去実績＋予測' : 'Demand Index History + Forecast'}
+        </p>
+        <div style={{ height: 200 }}>
+          <Bar
+            data={{
+              labels: history.map((r) => r.date.slice(5)),
+              datasets: [{
+                data: history.map((r) => r.index),
+                backgroundColor: history.map((r) => gaugeColor(r.index) + 'aa'),
+                borderColor: history.map((r) => gaugeColor(r.index)),
+                borderWidth: 1,
+                borderRadius: 3,
+              }],
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: '#a89070', font: { size: 9 } }, grid: { display: false } },
+                y: { min: 0, max: 100, ticks: { color: '#a89070', font: { size: 9 }, stepSize: 25 }, grid: { color: 'rgba(26,18,8,.05)' } },
+              },
+            }}
+          />
+        </div>
+      </div>
+
+    </div>
+  )
+}

@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "spots":     "Spots",
+    "events":    "Events",
+    "dashboard": "Forecast",
+    "advertise": "Advertise"
+  },
+  "home": {
+    "heroTitle":    "Ishigaki's nightlife,\nfor everyone.",
+    "heroSubtitle": "Bars, izakayas, live music — Ishigaki's nightlife scene in 3 languages.",
+    "findSpots":    "Find Spots",
+    "viewDashboard":"View Forecast",
+    "demandLabel":  "DEMAND INDEX",
+    "demandTitle":  "This week's crowd level",
+    "spotsLabel":   "SPOTS",
+    "spotsTitle":   "Featured Spots",
+    "eventsLabel":  "EVENTS",
+    "eventsTitle":  "Upcoming Events",
+    "viewAll":      "View All"
+  },
+  "spots": {
+    "label":     "SPOTS",
+    "title":     "All Spots",
+    "subtitle":  "Search Ishigaki's bars, izakayas, and live houses by category or area",
+    "results":   "results",
+    "noResults": "No spots found"
+  },
+  "spotDetail": {
+    "address":   "Address",
+    "hours":     "Hours",
+    "phone":     "Phone",
+    "instagram": "Instagram"
+  },
+  "events": {
+    "label":     "EVENTS",
+    "title":     "Events",
+    "subtitle":  "Live shows, DJ events, and festivals in Ishigaki",
+    "noEvents":  "No upcoming events"
+  },
+  "dashboard": {
+    "label":    "DEMAND FORECAST",
+    "title":    "Demand Forecast Dashboard",
+    "subtitle": "Ishigaki nightlife demand index — auto + manual hybrid"
+  },
+  "advertise": {
+    "label": "ADVERTISE"
+  }
+}

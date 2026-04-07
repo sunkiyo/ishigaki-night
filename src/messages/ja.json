@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "spots":     "スポット",
+    "events":    "イベント",
+    "dashboard": "需要予測",
+    "advertise": "掲載案内"
+  },
+  "home": {
+    "heroTitle":    "石垣島の夜を、\nもっと多くの人へ。",
+    "heroSubtitle": "バー・居酒屋・ライブハウス——石垣島のナイトライフを3言語で届けます。",
+    "findSpots":    "スポットを探す",
+    "viewDashboard":"需要予測を見る",
+    "demandLabel":  "DEMAND INDEX",
+    "demandTitle":  "今週の石垣島の混み具合",
+    "spotsLabel":   "SPOTS",
+    "spotsTitle":   "おすすめスポット",
+    "eventsLabel":  "EVENTS",
+    "eventsTitle":  "近日開催イベント",
+    "viewAll":      "すべて見る"
+  },
+  "spots": {
+    "label":     "SPOTS",
+    "title":     "スポット一覧",
+    "subtitle":  "石垣島のバー・居酒屋・ライブハウスをカテゴリ・エリアで検索",
+    "results":   "件",
+    "noResults": "該当するスポットがありません"
+  },
+  "spotDetail": {
+    "address":   "住所",
+    "hours":     "営業時間",
+    "phone":     "電話",
+    "instagram": "Instagram"
+  },
+  "events": {
+    "label":     "EVENTS",
+    "title":     "イベント情報",
+    "subtitle":  "石垣島のライブ・DJイベント・フェスティバル",
+    "noEvents":  "近日開催のイベントはありません"
+  },
+  "dashboard": {
+    "label":    "DEMAND FORECAST",
+    "title":    "需要予測ダッシュボード",
+    "subtitle": "石垣島ナイトライフ需要指数　自動＋手動ハイブリッド"
+  },
+  "advertise": {
+    "label": "ADVERTISE"
+  }
+}

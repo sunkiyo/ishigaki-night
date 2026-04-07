@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "spots":     "地點",
+    "events":    "活動",
+    "dashboard": "需求預測",
+    "advertise": "刊登廣告"
+  },
+  "home": {
+    "heroTitle":    "讓更多人認識\n石垣島的夜生活。",
+    "heroSubtitle": "酒吧、居酒屋、現場演出——以三種語言介紹石垣島夜生活。",
+    "findSpots":    "尋找地點",
+    "viewDashboard":"查看預測",
+    "demandLabel":  "需求指數",
+    "demandTitle":  "本週石垣島擁擠程度",
+    "spotsLabel":   "地點",
+    "spotsTitle":   "推薦地點",
+    "eventsLabel":  "活動",
+    "eventsTitle":  "近期活動",
+    "viewAll":      "查看全部"
+  },
+  "spots": {
+    "label":     "地點",
+    "title":     "地點列表",
+    "subtitle":  "按類別或地區搜索石垣島的酒吧、居酒屋和現場音樂場所",
+    "results":   "個結果",
+    "noResults": "未找到相關地點"
+  },
+  "spotDetail": {
+    "address":   "地址",
+    "hours":     "營業時間",
+    "phone":     "電話",
+    "instagram": "Instagram"
+  },
+  "events": {
+    "label":     "活動",
+    "title":     "活動資訊",
+    "subtitle":  "石垣島的現場演出、DJ活動和音樂節",
+    "noEvents":  "暫無近期活動"
+  },
+  "dashboard": {
+    "label":    "需求預測",
+    "title":    "需求預測儀表板",
+    "subtitle": "石垣島夜生活需求指數"
+  },
+  "advertise": {
+    "label": "刊登廣告"
+  }
+}

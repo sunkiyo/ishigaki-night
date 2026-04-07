@@ -1,0 +1,152 @@
+// 既存の advertise.html の内容をReactコンポーネントとして移植
+// フォント・カラーはglobals.cssのCSS変数を使用
+
+import { setRequestLocale } from 'next-intl/server'
+
+const PLANS = [
+  {
+    id: 'basic',
+    nameJa: 'ベーシック',
+    nameEn: 'Basic',
+    price: 30000,
+    tagJa: '小さく始めたい方に',
+    tagEn: 'To get started',
+    features: {
+      ja: ['Web掲載（3言語）', '店舗詳細ページ', 'Googleマップ掲載', 'フリーペーパー小枠'],
+      en: ['Web listing (3 languages)', 'Spot detail page', 'Google Maps listing', 'Free paper small slot'],
+    },
+    featured: false,
+  },
+  {
+    id: 'standard',
+    nameJa: 'スタンダード',
+    nameEn: 'Standard',
+    price: 50000,
+    tagJa: '集客に本気の方に',
+    tagEn: 'For serious promotion',
+    features: {
+      ja: ['Web掲載（3言語）', '写真撮影（毎月1回）', 'フリーペーパー中枠', 'SNS紹介（月2回）', 'クーポン発行'],
+      en: ['Web listing (3 languages)', 'Photo shoot (monthly)', 'Free paper mid slot', 'SNS feature (x2/month)', 'Coupon'],
+    },
+    featured: true,
+  },
+  {
+    id: 'premium',
+    nameJa: 'プレミアム',
+    nameEn: 'Premium',
+    price: 100000,
+    tagJa: 'メディア全面活用',
+    tagEn: 'Full media exposure',
+    features: {
+      ja: ['スタンダード全機能', 'フリーペーパー大枠・表紙連動', 'SNS紹介（週1回）', '動画制作（季節ごと）', '月次レポート'],
+      en: ['All Standard features', 'Free paper large + cover', 'SNS feature (weekly)', 'Seasonal video', 'Monthly report'],
+    },
+    featured: false,
+  },
+]
+
+export function generateStaticParams() {
+  return [{ locale: 'ja' }, { locale: 'en' }, { locale: 'zh' }, { locale: 'ko' }]
+}
+
+export default async function AdvertisePage({
+  params: { locale },
+}: {
+  params: { locale: string }
+}) {
+  setRequestLocale(locale)
+  const isJa = locale === 'ja'
+  const isZh = locale === 'zh'
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-20">
+
+      {/* HERO */}
+      <div className="text-center mb-20">
+        <p className="text-xs tracking-[0.3em] uppercase text-gold mb-6">
+          {isJa ? '掲載・広告のご案内' : isZh ? '刊登廣告' : 'Advertise with Us'}
+        </p>
+        <h1 className="font-mincho text-4xl md:text-5xl font-semibold leading-tight mb-6">
+          {isJa ? '石垣島の夜を、\nもっと多くの人へ。' : isZh ? '讓石垣島的夜晚\n被更多人看見。' : "Bring Ishigaki's\nnightlife to the world."}
+        </h1>
+        <p className="text-base leading-loose max-w-lg mx-auto opacity-60" style={{color:'rgb(var(--ink))'}}>
+          {isJa
+            ? '国内外の観光客が毎晩探している石垣島のバー・居酒屋情報。掲載するだけで、あなたのお店が旅人の夜の選択肢になります。'
+            : isZh
+            ? '每晚都有國內外遊客在尋找石垣島的酒吧和居酒屋。只需刊登，您的店就能成為旅人的夜晚選擇。'
+            : 'Tourists search for Ishigaki bars every night. Get listed and become part of their evening.'}
+        </p>
+      </div>
+
+      {/* STATS */}
+      <div className="grid grid-cols-3 gap-4 mb-20">
+        {[
+          { num: '30万人', label: isJa ? '年間観光客数' : isZh ? '年遊客數' : 'Annual visitors' },
+          { num: '3言語', label: isJa ? '日英中で発信' : isZh ? '日英中發信' : 'JP / EN / ZH' },
+          { num: '¥0',   label: isJa ? '初期費用なし' : isZh ? '無初始費用' : 'No setup fee' },
+        ].map((s) => (
+          <div key={s.num} className="border border-stone-200 rounded-xl p-6 text-center bg-surface">
+            <div className="font-mincho text-3xl font-semibold text-gold mb-2">{s.num}</div>
+            <div className="text-xs opacity-60" style={{color:'rgb(var(--ink))'}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* PLANS */}
+      <h2 className="font-mincho text-2xl font-semibold mb-8 text-center">
+        {isJa ? '掲載プラン' : isZh ? '刊登方案' : 'Plans'}
+      </h2>
+      <div className="grid md:grid-cols-3 gap-5 mb-20">
+        {PLANS.map((plan) => (
+          <div
+            key={plan.id}
+            className={`relative rounded-xl p-6 border ${
+              plan.featured
+                ? 'border-gold bg-gold/8'
+                : 'border-stone-200 bg-surface'
+            }`}
+          >
+            {plan.featured && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-white text-xs font-semibold px-3 py-0.5 rounded-full whitespace-nowrap">
+                {isJa ? '人気' : isZh ? '熱門' : 'Popular'}
+              </div>
+            )}
+            <p className="font-mincho text-lg font-semibold mb-1">
+              {isJa ? plan.nameJa : plan.nameEn}
+            </p>
+            <p className="text-3xl font-semibold text-gold font-mincho mb-1">
+              ¥{plan.price.toLocaleString()}
+              <span className="text-sm text-stone-400 font-sans font-normal"> / {isJa ? '月' : isZh ? '月' : 'mo'}</span>
+            </p>
+            <p className="text-xs text-stone-500 mb-5">{isJa ? plan.tagJa : plan.tagEn}</p>
+            <ul className="space-y-2 text-sm text-stone-600">
+              {(isJa ? plan.features.ja : plan.features.en).map((f) => (
+                <li key={f} className="flex items-start gap-2">
+                  <span className="text-gold mt-0.5">—</span>
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div className="text-center border border-stone-200 rounded-2xl p-12 bg-surface">
+        <h2 className="font-mincho text-2xl font-semibold mb-4">
+          {isJa ? 'まず話を聞いてみませんか。' : isZh ? '先聽聽我們的介紹？' : 'Want to learn more?'}
+        </h2>
+        <p className="text-stone-500 text-sm mb-8">
+          {isJa ? '資料請求・無料相談は下記からどうぞ。掲載を急かすことはしません。' : isZh ? '請透過以下方式索取資料或免費諮詢。' : 'Request info or a free consultation. No pressure.'}
+        </p>
+        <a
+          href="mailto:info@ishigaki-night.jp"
+          className="inline-block px-10 py-3 bg-gold text-white font-semibold text-sm tracking-wide hover:opacity-85 transition-opacity rounded"
+        >
+          {isJa ? '無料相談・資料請求' : isZh ? '免費諮詢・索取資料' : 'Free Consultation'}
+        </a>
+      </div>
+
+    </div>
+  )
+}
