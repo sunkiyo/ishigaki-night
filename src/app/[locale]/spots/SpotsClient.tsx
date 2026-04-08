@@ -5,10 +5,11 @@ import { useTranslations } from 'next-intl'
 import SpotCard from '@/components/spots/SpotCard'
 import SpotFilter from '@/components/spots/SpotFilter'
 import { spots } from '@/lib/spots'
+import type { DemandSummary } from '@/lib/demand'
 
 const CATEGORIES = ['all', 'bar', 'izakaya', 'live', 'club', 'dining'] as const
 
-export default function SpotsClient({ locale }: { locale: string }) {
+export default function SpotsClient({ locale, demand }: { locale: string; demand?: DemandSummary }) {
   const t = useTranslations('spots')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<string>('all')
@@ -50,7 +51,7 @@ export default function SpotsClient({ locale }: { locale: string }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.map((spot) => (
-          <SpotCard key={spot.id} spot={spot} locale={locale} />
+          <SpotCard key={spot.id} spot={spot} locale={locale} demand={demand} />
         ))}
         {filtered.length === 0 && (
           <p className="col-span-3 text-center py-20 text-stone-400">{t('noResults')}</p>

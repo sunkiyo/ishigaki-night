@@ -5,6 +5,7 @@ export type DemandEntry = {
   hotel: number | null
   note: string
   index: number
+  isForecast?: boolean
 }
 
 export type DemandSummary = {
@@ -42,6 +43,14 @@ const historyData: DemandEntry[] = [
   { date: '2026-02-23', trends: 63, flight: 17400, hotel: 40, note: '', index: 0 },
   { date: '2026-03-09', trends: 68, flight: 18900, hotel: 35, note: '春休み前', index: 0 },
   { date: '2026-03-16', trends: 74, flight: 21500, hotel: 28, note: '繁忙期入り', index: 0 },
+  { date: '2026-03-23', trends: 76, flight: 22800, hotel: 22, note: '春休みピーク', index: 0 },
+  { date: '2026-03-30', trends: 82, flight: 25600, hotel: 15, note: '春休みピーク継続', index: 0 },
+  { date: '2026-04-06', trends: 71, flight: 21200, hotel: 25, note: 'GW直前', index: 0 },
+  { date: '2026-04-13', trends: 88, flight: 28500, hotel: 10, note: 'GW前半（予測）', isForecast: true, index: 0 },
+  { date: '2026-04-20', trends: 92, flight: 31000, hotel: 8,  note: 'GWピーク（予測）', isForecast: true, index: 0 },
+  { date: '2026-04-27', trends: 89, flight: 29000, hotel: 12, note: 'GW後半（予測）', isForecast: true, index: 0 },
+  { date: '2026-05-04', trends: 85, flight: 26000, hotel: 18, note: 'GW最終週（予測）', isForecast: true, index: 0 },
+  { date: '2026-05-11', trends: 62, flight: 18000, hotel: 38, note: 'GW明け（予測）', isForecast: true, index: 0 },
 ].map((d) => ({
   ...d,
   index: calcIndex(d.trends ?? 0, d.flight ?? 15000, d.hotel ?? 50),
@@ -52,7 +61,7 @@ export async function getDemandHistory(): Promise<DemandEntry[]> {
 }
 
 export async function getLatestDemand(): Promise<DemandSummary> {
-  const latest = historyData[historyData.length - 1]
+  const latest = [...historyData].reverse().find((d) => !d.isForecast) ?? historyData[historyData.length - 1]
   return {
     index: latest.index,
     status: getStatus(latest.index),

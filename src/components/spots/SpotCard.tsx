@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import type { Spot } from '@/lib/spots'
+import type { DemandSummary } from '@/lib/demand'
+import DemandMini from '@/components/spots/DemandMini'
 
 const CATEGORY_LABEL: Record<string, { ja: string; en: string; zh: string; ko: string }> = {
   bar:     { ja: 'バー',       en: 'Bar',      zh: '酒吧',   ko: '바' },
@@ -9,7 +11,7 @@ const CATEGORY_LABEL: Record<string, { ja: string; en: string; zh: string; ko: s
   dining:  { ja: 'ダイニング', en: 'Dining',   zh: '餐厅',   ko: '다이닝' },
 }
 
-export default function SpotCard({ spot, locale }: { spot: Spot; locale: string }) {
+export default function SpotCard({ spot, locale, demand }: { spot: Spot; locale: string; demand?: DemandSummary }) {
   const lang = locale
   const l = lang as 'ja' | 'en' | 'zh' | 'ko'
   const name = spot.i18n?.[l as "en" | "zh" | "ko"]?.name ?? spot.name
@@ -58,6 +60,11 @@ export default function SpotCard({ spot, locale }: { spot: Spot; locale: string 
             {spot.openHour}:00–{spot.closeHour}:00
           </div>
         </div>
+        {demand && (
+          <div className="mt-3">
+            <DemandMini demand={demand} locale={locale} />
+          </div>
+        )}
       </div>
     </Link>
   )

@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getSpotById, getSpots } from '@/lib/spots'
 import CouponButton from '@/components/spots/CouponButton'
+import DemandMini from '@/components/spots/DemandMini'
+import { getLatestDemand } from '@/lib/demand'
 
 export async function generateStaticParams() {
   const spots = await getSpots()
@@ -22,7 +24,10 @@ export default async function SpotDetailPage({
   const spot = await getSpotById(id)
   if (!spot) notFound()
 
-  const t = await getTranslations('spotDetail')
+  const [t, demand] = await Promise.all([
+    getTranslations('spotDetail'),
+    getLatestDemand(),
+  ])
   const i18nKey = locale as 'en' | 'zh' | 'ko'
   const name = spot.i18n?.[i18nKey]?.name ?? spot.name
   const desc = spot.i18n?.[i18nKey]?.description ?? spot.description
@@ -33,6 +38,10 @@ export default async function SpotDetailPage({
         <p className="text-xs tracking-[0.2em] uppercase text-gold mb-3">{spot.area} — {spot.category}</p>
         <h1 className="font-mincho text-4xl font-semibold mb-4">{name}</h1>
         <p className="text-stone-500 leading-loose">{desc}</p>
+      </div>
+
+      <div className="mb-4">
+        <DemandMini demand={demand} locale={locale} />
       </div>
 
       <div className="border border-stone-200 rounded-xl overflow-hidden mb-8 bg-surface">

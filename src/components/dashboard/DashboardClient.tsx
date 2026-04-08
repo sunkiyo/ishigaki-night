@@ -217,17 +217,38 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
 
       {/* 需要指数履歴 */}
       <div className="bg-surface border border-stone-200 rounded-xl p-5">
-        <p className="text-sm font-medium text-stone-700 mb-4">
-          {lang === 'ja' ? '需要指数 過去実績＋予測' : 'Demand Index History + Forecast'}
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-medium text-stone-700">
+            {lang === 'ja' ? '需要指数 過去実績＋予測' : 'Demand Index History + Forecast'}
+          </p>
+          {/* 凡例 */}
+          <div className="flex items-center gap-4 text-xs text-stone-400">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#d4923faa', border: '1px solid #d4923f' }} />
+              {lang === 'ja' ? '実績' : 'Actual'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: 'rgba(200,200,200,.35)', border: '1px dashed #aaa' }} />
+              {lang === 'ja' ? '予測' : 'Forecast'}
+            </span>
+          </div>
+        </div>
         <div style={{ height: 200 }}>
           <Bar
             data={{
               labels: history.map((r) => r.date.slice(5)),
               datasets: [{
                 data: history.map((r) => r.index),
-                backgroundColor: history.map((r) => gaugeColor(r.index) + 'aa'),
-                borderColor: history.map((r) => gaugeColor(r.index)),
+                backgroundColor: history.map((r) =>
+                  (r as { isForecast?: boolean }).isForecast
+                    ? 'rgba(200,200,200,.35)'
+                    : gaugeColor(r.index) + 'aa'
+                ),
+                borderColor: history.map((r) =>
+                  (r as { isForecast?: boolean }).isForecast
+                    ? 'rgba(150,150,150,.7)'
+                    : gaugeColor(r.index)
+                ),
                 borderWidth: 1,
                 borderRadius: 3,
               }],
@@ -242,6 +263,77 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
               },
             }}
           />
+        </div>
+      </div>
+
+      {/* 今後4週間のアクション提案テーブル */}
+      <div className="bg-surface border border-stone-200 rounded-xl p-5">
+        <p className="text-sm font-medium text-stone-700 mb-1">
+          {lang === 'ja' ? '今後4週間 お店推奨アクション' : 'Next 4 Weeks — Recommended Actions'}
+        </p>
+        <p className="text-xs text-stone-400 mb-4">
+          {lang === 'ja' ? '需要予測にもとづくお店向け提案' : 'Store recommendations based on demand forecast'}
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-stone-200">
+                <th className="text-left py-2 pr-4 text-stone-400 font-normal whitespace-nowrap">
+                  {lang === 'ja' ? '週' : 'Week'}
+                </th>
+                <th className="text-left py-2 pr-4 text-stone-400 font-normal whitespace-nowrap">
+                  {lang === 'ja' ? '需要予測' : 'Forecast'}
+                </th>
+                <th className="text-left py-2 text-stone-400 font-normal">
+                  {lang === 'ja' ? 'お店推奨アクション' : 'Recommended Action'}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                {
+                  week: '4/13〜',
+                  index: 88,
+                  badge: '🔴',
+                  status: lang === 'ja' ? '激混み' : 'Peak',
+                  action: lang === 'ja' ? 'DJイベント開催・スタッフ2倍体制' : 'Host DJ events & double staffing',
+                },
+                {
+                  week: '4/20〜',
+                  index: 92,
+                  badge: '🔴',
+                  status: lang === 'ja' ? '激混み' : 'Peak',
+                  action: lang === 'ja' ? 'SNS告知最大化・予約受付開始' : 'Max SNS promotions & open reservations',
+                },
+                {
+                  week: '4/27〜',
+                  index: 89,
+                  badge: '🔴',
+                  status: lang === 'ja' ? '激混み' : 'Peak',
+                  action: lang === 'ja' ? '売上最大化週・特別メニュー投入' : 'Peak revenue week — special menus',
+                },
+                {
+                  week: '5/11〜',
+                  index: 62,
+                  badge: '🟡',
+                  status: lang === 'ja' ? 'にぎわい' : 'Busy',
+                  action: lang === 'ja' ? 'GW明けの常連客対応・クーポン施策' : 'Post-GW regulars & coupon campaign',
+                },
+              ].map((row) => (
+                <tr key={row.week} className="border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors">
+                  <td className="py-3 pr-4 text-stone-600 font-medium whitespace-nowrap">{row.week}</td>
+                  <td className="py-3 pr-4 whitespace-nowrap">
+                    <span className="flex items-center gap-1">
+                      <span>{row.badge}</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: row.index >= 75 ? '#f05350' : '#f0b865' }}>{row.index}</span>
+                      <span className="text-stone-400 ml-1">{row.status}</span>
+                    </span>
+                  </td>
+                  <td className="py-3 text-stone-600 leading-relaxed">{row.action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
