@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
-  BarElement, ArcElement, Filler, Tooltip, Legend,
+  BarElement, LineController, BarController,
+  ArcElement, Filler, Tooltip, Legend,
   type ChartData,
 } from 'chart.js'
 import { Bar } from 'react-chartjs-2'
@@ -16,7 +17,7 @@ import type { YearData } from '@/lib/visitorData'
 import { getStatus } from '@/lib/demand'
 import { getLatestYear, wareki, MONTHS_JA, MONTHS_EN } from '@/lib/visitorData'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Filler, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, LineController, BarController, ArcElement, Filler, Tooltip, Legend)
 
 const STATUS_CONFIG = {
   hot:    { label: { ja: '激混み', en: 'Peak',     zh: '超热' }, color: '#f05350' },
