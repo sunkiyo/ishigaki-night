@@ -1,0 +1,136 @@
+import { NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+
+// 西暦→令和変換
+function westernToReiwa(year: number): number {
+  return year - 2018
+}
+
+// PDFのURLを生成（月を試行する）
+function buildPdfUrl(year: number, month: number): string {
+  const reiwa = westernToReiwa(year)
+  const yy = String(reiwa).padStart(2, '0')
+  const mm = String(month).padStart(2, '0')
+  return `https://www.city.ishigaki.okinawa.jp/material/files/group/11/nyuikisuikei${yy}${mm}.pdf`
+}
+
+// PDFテキストから来島者数を抽出するパーサー
+// PDFのページ1には月別データが表形式で入っている
+// テキスト抽出後に数値パターンを正規表現でパース
+function parseVisitorData(text: string, targetMonth: number): { visitors: number | null, air: number | null, sea: number | null } {
+  // PDFテキストの数値は3桁カンマ区切り（例: 118,755）または桁区切りなし
+  // ページ1の構造: 月 | 観光客数 | 空路 | 海路 | ...
+  const lines = text.split('\n').filter(l => l.trim())
+
+  // 月を表す行を探す（例: "1月" "1" など）
+  const monthPatterns = [
+    new RegExp(`^${targetMonth}月`),
+    new RegExp(`^${targetMonth}\\s`),
+    new RegExp(`\\b${targetMonth}月\\b`),
+  ]
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (monthPatterns.some(p => p.test(line.trim()))) {
+      // この行またはその周辺から数値を抽出
+      const numbers = (line + ' ' + (lines[i+1] || '')).match(/[\d,]+/g)
+        ?.map(n => parseInt(n.replace(/,/g, ''), 10))
+        .filter(n => n > 1000) // 来島者数は数千〜数十万
+
+      if (numbers && numbers.length >= 3) {
+        return {
+          visitors: numbers[0] || null,
+          air: numbers[1] || null,
+          sea: numbers[2] || null,
+        }
+      }
+    }
+  }
+
+  // フォールバック: 大きな数値を探す
+  const allNumbers = text.match(/\d{2,3},\d{3}/g)?.map(n => parseInt(n.replace(',', ''), 10)) || []
+  return {
+    visitors: allNumbers[0] || null,
+    air: allNumbers[1] || null,
+    sea: allNumbers[2] || null,
+  }
+}
+
+export async function GET(request: Request) {
+  // Cronシークレット確認（Vercel Cronは自動でヘッダーを付与）
+  const authHeader = request.headers.get('authorization')
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const results: Array<{ year: number, month: number, status: string }> = []
+  const now = new Date()
+
+  // 直近3ヶ月分を試行（最新データが公開済みか確認するため）
+  for (let i = 1; i <= 3; i++) {
+    const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const year = targetDate.getFullYear()
+    const month = targetDate.getMonth() + 1
+
+    // すでにDBにデータがあるかチェック
+    const { data: existing } = await supabase
+      .from('visitor_monthly')
+      .select('id, visitors')
+      .eq('year', year)
+      .eq('month', month)
+      .single()
+
+    if (existing?.visitors) {
+      results.push({ year, month, status: 'already_exists' })
+      continue
+    }
+
+    const pdfUrl = buildPdfUrl(year, month)
+
+    try {
+      // PDFをフェッチ
+      const response = await fetch(pdfUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ishigaki-night-bot/1.0)' },
+      })
+
+      if (!response.ok) {
+        results.push({ year, month, status: `pdf_not_found: ${response.status}` })
+        continue
+      }
+
+      const arrayBuffer = await response.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+
+      // pdf-parseでテキスト抽出
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const pdfParse: (buffer: Buffer, options?: object) => Promise<{ text: string }> = require('pdf-parse')
+      const pdfData = await pdfParse(buffer, { max: 1 }) // 1ページ目のみ
+
+      const parsed = parseVisitorData(pdfData.text, month)
+
+      // Supabaseに保存（upsert）
+      const { error } = await supabase
+        .from('visitor_monthly')
+        .upsert({
+          year,
+          month,
+          visitors: parsed.visitors,
+          air: parsed.air,
+          sea: parsed.sea,
+          source_url: pdfUrl,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'year,month' })
+
+      if (error) {
+        results.push({ year, month, status: `db_error: ${error.message}` })
+      } else {
+        results.push({ year, month, status: 'updated', ...parsed })
+      }
+
+    } catch (err) {
+      results.push({ year, month, status: `error: ${String(err)}` })
+    }
+  }
+
+  return NextResponse.json({ success: true, results, timestamp: now.toISOString() })
+}

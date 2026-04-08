@@ -31,6 +31,42 @@ export const OFFICIAL_DATA: Record<number, YearData> = {
   },
 }
 
+// Supabaseから読み込む関数を追加
+export async function getOfficialDataFromDB(): Promise<Record<number, YearData>> {
+  try {
+    const { supabase } = await import('@/lib/supabase')
+    const { data, error } = await supabase
+      .from('visitor_monthly')
+      .select('*')
+      .order('year').order('month')
+
+    if (error || !data || data.length === 0) return OFFICIAL_DATA
+
+    const result: Record<number, YearData> = {}
+
+    for (const row of data) {
+      if (!result[row.year]) {
+        result[row.year] = { visitors: Array(12).fill(null), air: Array(12).fill(null), sea: Array(12).fill(null), total: null }
+      }
+      const idx = row.month - 1
+      result[row.year].visitors[idx] = row.visitors
+      result[row.year].air[idx] = row.air
+      result[row.year].sea[idx] = row.sea
+    }
+
+    // 年ごとのtotalを計算
+    for (const year of Object.keys(result)) {
+      const y = result[Number(year)]
+      const vals = y.visitors.filter((v): v is number => v !== null)
+      y.total = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null
+    }
+
+    return result
+  } catch {
+    return OFFICIAL_DATA
+  }
+}
+
 export const MONTHS_JA = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
 export const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 

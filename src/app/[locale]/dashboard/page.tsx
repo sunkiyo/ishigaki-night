@@ -4,7 +4,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import DashboardClient from '@/components/dashboard/DashboardClient'
 import { getDemandHistory } from '@/lib/demand'
-import { OFFICIAL_DATA } from '@/lib/visitorData'
+import { getOfficialDataFromDB } from '@/lib/visitorData'
 
 export function generateStaticParams() {
   return [{ locale: 'ja' }, { locale: 'en' }, { locale: 'zh' }, { locale: 'ko' }]
@@ -18,6 +18,7 @@ export default async function DashboardPage({
   setRequestLocale(locale)
   const t = await getTranslations('dashboard')
   const history = await getDemandHistory()
+  const officialData = await getOfficialDataFromDB()
 
   return (
     <div className="px-4 py-6">
@@ -35,7 +36,7 @@ export default async function DashboardPage({
         {/* クライアントコンポーネント（Chart.js使用） */}
         <DashboardClient
           history={history}
-          officialData={OFFICIAL_DATA}
+          officialData={officialData}
           lang={locale}
         />
       </div>
