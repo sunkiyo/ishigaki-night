@@ -17,13 +17,19 @@ function extractTextFromPDF(buffer: Buffer): string {
   const parts: string[] = []
 
   // (テキスト) Tj 形式
-  for (const m of raw.matchAll(/\(([^)\\]{0,200})\)\s*Tj/g)) {
-    parts.push(m[1])
+  const tjRegex = /\(([^)\\]{0,200})\)\s*Tj/g
+  let tjMatch: RegExpExecArray | null
+  while ((tjMatch = tjRegex.exec(raw)) !== null) {
+    parts.push(tjMatch[1])
   }
   // [(テキスト) ...] TJ 形式
-  for (const m of raw.matchAll(/\[([^\]]{0,500})\]\s*TJ/g)) {
-    for (const inner of m[1].matchAll(/\(([^)\\]{0,100})\)/g)) {
-      parts.push(inner[1])
+  const tjArrayRegex = /\[([^\]]{0,500})\]\s*TJ/g
+  let tjArrayMatch: RegExpExecArray | null
+  while ((tjArrayMatch = tjArrayRegex.exec(raw)) !== null) {
+    const innerRegex = /\(([^)\\]{0,100})\)/g
+    let innerMatch: RegExpExecArray | null
+    while ((innerMatch = innerRegex.exec(tjArrayMatch[1])) !== null) {
+      parts.push(innerMatch[1])
     }
   }
 
@@ -37,25 +43,32 @@ function parseVisitorData(
   targetMonth: number
 ): { visitors: number | null; air: number | null; sea: number | null } {
   // 5〜6桁のカンマ区切り数値を全て抽出
-  const allNums = [...text.matchAll(/\b(\d{2,3}),(\d{3})\b/g)]
-    .map(m => parseInt(m[1] + m[2], 10))
-    .filter(n => n >= 5000 && n <= 999999)
+  const allNums: number[] = []
+  const numRegex = /\b(\d{2,3}),(\d{3})\b/g
+  let numMatch: RegExpExecArray | null
+  while ((numMatch = numRegex.exec(text)) !== null) {
+    const n = parseInt(numMatch[1] + numMatch[2], 10)
+    if (n >= 5000 && n <= 999999) allNums.push(n)
+  }
 
   if (allNums.length < 3) {
     return { visitors: null, air: null, sea: null }
   }
 
   // 月ヘッダー付近の数値グループを特定する
-  // PDFテキストに "1月" "2月" ... のパターンがあればその直後の数値3つを使う
   const monthStr = `${targetMonth}\u6708` // 例: "1月"
   const idx = text.indexOf(monthStr)
   if (idx !== -1) {
     const slice = text.slice(idx, idx + 200)
-    const nums = [...slice.matchAll(/\b(\d{2,3}),(\d{3})\b/g)]
-      .map(m => parseInt(m[1] + m[2], 10))
-      .filter(n => n >= 5000)
-    if (nums.length >= 3) {
-      return { visitors: nums[0], air: nums[1], sea: nums[2] }
+    const sliceNums: number[] = []
+    const sliceRegex = /\b(\d{2,3}),(\d{3})\b/g
+    let sliceMatch: RegExpExecArray | null
+    while ((sliceMatch = sliceRegex.exec(slice)) !== null) {
+      const n = parseInt(sliceMatch[1] + sliceMatch[2], 10)
+      if (n >= 5000) sliceNums.push(n)
+    }
+    if (sliceNums.length >= 3) {
+      return { visitors: sliceNums[0], air: sliceNums[1], sea: sliceNums[2] }
     }
   }
 
