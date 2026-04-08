@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// 西暦→令和変換
-function westernToReiwa(year: number): number {
-  return year - 2018
-}
-
-// PDFのURLを生成（月を試行する）
+// PDFのURLを生成
+// ファイル名パターン: nyuikisuikei[西暦下2桁][月2桁].pdf
+// 例: 2026年2月 → nyuikisuikei2602.pdf
 function buildPdfUrl(year: number, month: number): string {
-  const reiwa = westernToReiwa(year)
-  const yy = String(reiwa).padStart(2, '0')
+  const yy = String(year).slice(-2) // 西暦の下2桁（2026→"26"）
   const mm = String(month).padStart(2, '0')
   return `https://www.city.ishigaki.okinawa.jp/material/files/group/11/nyuikisuikei${yy}${mm}.pdf`
 }
