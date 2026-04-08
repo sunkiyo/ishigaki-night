@@ -443,9 +443,76 @@ export const spots: Spot[] = [
 ]
 
 export async function getSpots(): Promise<Spot[]> {
-  return spots
+  try {
+    const { supabase } = await import('@/lib/supabase')
+    const { data, error } = await supabase
+      .from('spots')
+      .select('*')
+      .eq('is_published', true)
+      .order('name')
+
+    if (error || !data || data.length === 0) {
+      return spots
+    }
+
+    return data.map((row): Spot => ({
+      id: row.slug,
+      name: row.name,
+      category: row.category,
+      area: row.address?.split('県')?.[1]?.split('市')?.[0] ?? '石垣島',
+      address: row.address ?? '',
+      openHour: parseInt(row.open_hours?.split(':')[0] ?? '19'),
+      closeHour: parseInt(row.open_hours?.split('-')[1]?.split(':')[0] ?? '2'),
+      thumb: '🏝️',
+      rating: 4.5,
+      reviewCount: 0,
+      priceRange: (row.price_range as Spot['priceRange']) ?? '¥¥',
+      tags: row.tags ?? [],
+      description: row.description ?? '',
+      phone: row.phone ?? undefined,
+      i18n: {
+        en: row.name_en ? { name: row.name_en, description: row.description_en ?? '' } : undefined,
+      },
+    }))
+  } catch {
+    return spots
+  }
 }
 
 export async function getSpotById(id: string): Promise<Spot | undefined> {
-  return spots.find((s) => s.id === id)
+  try {
+    const { supabase } = await import('@/lib/supabase')
+    const { data, error } = await supabase
+      .from('spots')
+      .select('*')
+      .eq('slug', id)
+      .eq('is_published', true)
+      .single()
+
+    if (error || !data) {
+      return spots.find((s) => s.id === id)
+    }
+
+    return {
+      id: data.slug,
+      name: data.name,
+      category: data.category,
+      area: data.address?.split('県')?.[1]?.split('市')?.[0] ?? '石垣島',
+      address: data.address ?? '',
+      openHour: parseInt(data.open_hours?.split(':')[0] ?? '19'),
+      closeHour: parseInt(data.open_hours?.split('-')[1]?.split(':')[0] ?? '2'),
+      thumb: '🏝️',
+      rating: 4.5,
+      reviewCount: 0,
+      priceRange: (data.price_range as Spot['priceRange']) ?? '¥¥',
+      tags: data.tags ?? [],
+      description: data.description ?? '',
+      phone: data.phone ?? undefined,
+      i18n: {
+        en: data.name_en ? { name: data.name_en, description: data.description_en ?? '' } : undefined,
+      },
+    }
+  } catch {
+    return spots.find((s) => s.id === id)
+  }
 }
