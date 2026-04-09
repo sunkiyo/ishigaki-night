@@ -9,8 +9,8 @@ const PLANS = [
     tagJa: 'まず試してみたい方に',
     tagEn: 'Just getting started',
     features: {
-      ja: ['Web掲載（日本語）', '店舗詳細ページ', 'Googleマップリンク'],
-      en: ['Web listing (Japanese)', 'Spot detail page', 'Google Maps link'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link'],
     },
     featured: false,
   },
@@ -22,8 +22,8 @@ const PLANS = [
     tagJa: '小さく始めたい方に',
     tagEn: 'To get started',
     features: {
-      ja: ['Web掲載（3言語）', '店舗詳細ページ', 'Googleマップリンク', 'クーポン発行'],
-      en: ['Web listing (3 languages)', 'Spot detail page', 'Google Maps link', 'Coupon'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'クーポン発行'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'Coupon'],
     },
     featured: false,
   },
@@ -35,8 +35,8 @@ const PLANS = [
     tagJa: '集客に本気の方に',
     tagEn: 'For serious promotion',
     features: {
-      ja: ['Web掲載（3言語）', '店舗詳細ページ', 'クーポン発行', 'SNS紹介（月2回）', 'フリーペーパー掲載'],
-      en: ['Web listing (3 languages)', 'Spot detail page', 'Coupon', 'SNS feature (×2/mo)', 'Free paper listing'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'クーポン発行', 'SNS紹介（月2回）', 'フリーペーパー掲載'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Coupon', 'SNS feature (×2/mo)', 'Free paper listing'],
     },
     featured: true,
   },
