@@ -12,7 +12,6 @@ function buildPdfUrl(year: number, month: number): string {
 }
 
 // FlateDecode圧縮ストリームを含むPDFからテキストを抽出
-// Buffer操作でstream/endstreamを検出 → zlibで解凍 → Tj/TJ演算子でテキスト収集
 function extractTextFromPDF(buffer: Buffer): string {
   const parts: string[] = []
 
@@ -21,11 +20,9 @@ function extractTextFromPDF(buffer: Buffer): string {
 
   let pos = 0
   while (pos < buffer.length) {
-    // 'stream' キーワードを探す
     const streamPos = buffer.indexOf(streamMarker, pos)
     if (streamPos === -1) break
 
-    // stream の直後は \r\n か \n
     let dataStart = streamPos + streamMarker.length
     if (buffer[dataStart] === 0x0d && buffer[dataStart + 1] === 0x0a) {
       dataStart += 2
@@ -36,18 +33,15 @@ function extractTextFromPDF(buffer: Buffer): string {
       continue
     }
 
-    // 対応する endstream を探す
     const endStreamPos = buffer.indexOf(endStreamMarker, dataStart)
     if (endStreamPos === -1) break
 
-    // endstream 直前の \r\n or \n を除去
     let dataEnd = endStreamPos
     if (buffer[dataEnd - 1] === 0x0a) dataEnd--
     if (dataEnd > 0 && buffer[dataEnd - 1] === 0x0d) dataEnd--
 
     const streamData = buffer.subarray(dataStart, dataEnd)
 
-    // stream オブジェクトのヘッダーを確認（直前500バイト）
     const headerArea = buffer
       .subarray(Math.max(0, streamPos - 500), streamPos)
       .toString('latin1')
@@ -59,7 +53,6 @@ function extractTextFromPDF(buffer: Buffer): string {
       try {
         content = inflateSync(streamData).toString('latin1')
       } catch {
-        // inflate失敗はスキップ
         pos = endStreamPos + endStreamMarker.length
         continue
       }
@@ -67,13 +60,11 @@ function extractTextFromPDF(buffer: Buffer): string {
       content = streamData.toString('latin1')
     }
 
-    // (テキスト) Tj 形式
     const tjRegex = /\(([^)\\]{0,200})\)\s*Tj/g
     let tjMatch: RegExpExecArray | null
     while ((tjMatch = tjRegex.exec(content)) !== null) {
       parts.push(tjMatch[1])
     }
-    // [(テキスト) ...] TJ 形式
     const tjArrayRegex = /\[([^\]]{0,500})\]\s*TJ/g
     let tjArrayMatch: RegExpExecArray | null
     while ((tjArrayMatch = tjArrayRegex.exec(content)) !== null) {
@@ -91,24 +82,50 @@ function extractTextFromPDF(buffer: Buffer): string {
 }
 
 // PDFのカーニングによるスペース入り数字を正規化
-// 例: "1 7 4 , 1 8 1" → "174,181" / "84, 346" → "84,346"
+// "1 7 4 , 1 8 1" → "174,181" / "84, 346" → "84,346"
+// ※ 数字間の不要な結合を防ぐため、単一桁のみを対象にする
 function normalizeNumbers(text: string): string {
   let result = text
-  // カンマ前後のスペース除去
+  // Step1: カンマ前後のスペース除去: "84, 346" → "84,346"
   result = result.replace(/(\d)\s*,\s*(\d)/g, '$1,$2')
-  // 桁間スペースを除去（"1 7 4" → "174"）を複数回適用
-  for (let i = 0; i < 6; i++) {
-    result = result.replace(/(\d) (\d)/g, '$1$2')
-  }
+  // Step2: 単一桁がスペース区切りで並ぶ列を結合: "\b1 7 4\b" → "174"
+  // \b(\d)( \d)+ は「単語境界から始まる単一桁の連続」のみマッチ
+  // → 多桁の連続数字(84, 346等)は\b後に複数桁が続くためマッチしない
+  result = result.replace(/\b(\d)( \d)+/g, (match) => match.replace(/ /g, ''))
   return result
 }
 
+// air + sea = total の整合性を持つ3数値を探す
+// 石垣市PDF: 来島者数（合計）= 空路 + 海路
+function findConsistentTriplet(
+  nums: number[]
+): { visitors: number; air: number; sea: number } | null {
+  const candidates = nums.slice(0, 20)
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const sum = candidates[i] + candidates[j]
+      // 月間来島者数として妥当な範囲: 50,000〜400,000
+      if (sum < 50000 || sum > 400000) continue
+      for (let k = 0; k < candidates.length; k++) {
+        if (k === i || k === j) continue
+        if (Math.abs(candidates[k] - sum) <= 200) {
+          return {
+            visitors: candidates[k],
+            air: Math.max(candidates[i], candidates[j]),
+            sea: Math.min(candidates[i], candidates[j]),
+          }
+        }
+      }
+    }
+  }
+  return null
+}
+
 // 抽出テキストから来島者数（観光客数・空路・海路）をパース
-// 石垣市PDFの1ページ目: 月 | 観光客数 | 空路 | 海路 | ...
 function parseVisitorData(
   text: string,
   targetMonth: number
-): { visitors: number | null; air: number | null; sea: number | null } {
+): { visitors: number | null; air: number | null; sea: number | null; allNums: number[] } {
   const normalized = normalizeNumbers(text)
 
   // 5〜6桁のカンマ区切り数値を全て抽出
@@ -121,11 +138,11 @@ function parseVisitorData(
   }
 
   if (allNums.length < 3) {
-    return { visitors: null, air: null, sea: null }
+    return { visitors: null, air: null, sea: null, allNums }
   }
 
-  // 月ヘッダー付近の数値グループを特定する
-  const monthStr = `${targetMonth}\u6708` // 例: "1月"
+  // 月ヘッダー付近の数値グループを特定する（PDFが日本語テキストを含む場合）
+  const monthStr = `${targetMonth}\u6708`
   const idx = normalized.indexOf(monthStr)
   if (idx !== -1) {
     const slice = normalized.slice(idx, idx + 200)
@@ -137,8 +154,14 @@ function parseVisitorData(
       if (n >= 5000) sliceNums.push(n)
     }
     if (sliceNums.length >= 3) {
-      return { visitors: sliceNums[0], air: sliceNums[1], sea: sliceNums[2] }
+      return { visitors: sliceNums[0], air: sliceNums[1], sea: sliceNums[2], allNums }
     }
+  }
+
+  // air + sea = total の整合性チェックで正しい3値を特定
+  const triplet = findConsistentTriplet(allNums)
+  if (triplet) {
+    return { ...triplet, allNums }
   }
 
   // フォールバック: 先頭3つの大きな数値
@@ -146,11 +169,11 @@ function parseVisitorData(
     visitors: allNums[0] ?? null,
     air: allNums[1] ?? null,
     sea: allNums[2] ?? null,
+    allNums,
   }
 }
 
 export async function GET(request: Request) {
-  // Cronシークレット確認
   const authHeader = request.headers.get('authorization')
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -159,13 +182,11 @@ export async function GET(request: Request) {
   const results: Array<{ year: number; month: number; status: string; [k: string]: unknown }> = []
   const now = new Date()
 
-  // 直近3ヶ月を試行（新しいPDFが公開済みか確認）
   for (let i = 1; i <= 3; i++) {
     const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const year = targetDate.getFullYear()
     const month = targetDate.getMonth() + 1
 
-    // DBに既存データがあればスキップ
     const { data: existing } = await supabaseAdmin
       .from('visitor_monthly')
       .select('id, visitors')
@@ -195,12 +216,10 @@ export async function GET(request: Request) {
 
       const text = extractTextFromPDF(buffer)
       const parsed = parseVisitorData(text, month)
+      const { allNums, ...parsedValues } = parsed
 
-      // デバッグ用: 正規化後テキストの先頭500文字をレスポンスに含める
-      const normalized = normalizeNumbers(text)
-      const textSample = normalized.slice(0, 500)
-      console.log(`[${year}/${month}] normalized:`, textSample)
-      console.log(`[${year}/${month}] parsed:`, parsed)
+      console.log(`[${year}/${month}] allNums:`, allNums.slice(0, 10))
+      console.log(`[${year}/${month}] parsed:`, parsedValues)
 
       const { error } = await supabaseAdmin
         .from('visitor_monthly')
@@ -208,9 +227,9 @@ export async function GET(request: Request) {
           {
             year,
             month,
-            visitors: parsed.visitors,
-            air: parsed.air,
-            sea: parsed.sea,
+            visitors: parsedValues.visitors,
+            air: parsedValues.air,
+            sea: parsedValues.sea,
             source_url: pdfUrl,
             updated_at: new Date().toISOString(),
           },
@@ -218,9 +237,9 @@ export async function GET(request: Request) {
         )
 
       if (error) {
-        results.push({ year, month, status: `db_error: ${error.message}`, textSample })
+        results.push({ year, month, status: `db_error: ${error.message}`, allNums: allNums.slice(0, 10) })
       } else {
-        results.push({ year, month, status: 'updated', ...parsed, textSample })
+        results.push({ year, month, status: 'updated', ...parsedValues, allNums: allNums.slice(0, 10) })
       }
     } catch (err) {
       results.push({ year, month, status: `error: ${String(err)}` })
