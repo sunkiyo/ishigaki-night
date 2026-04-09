@@ -90,17 +90,32 @@ function extractTextFromPDF(buffer: Buffer): string {
   return parts.join(' ')
 }
 
+// PDFのカーニングによるスペース入り数字を正規化
+// 例: "1 7 4 , 1 8 1" → "174,181" / "84, 346" → "84,346"
+function normalizeNumbers(text: string): string {
+  let result = text
+  // カンマ前後のスペース除去
+  result = result.replace(/(\d)\s*,\s*(\d)/g, '$1,$2')
+  // 桁間スペースを除去（"1 7 4" → "174"）を複数回適用
+  for (let i = 0; i < 6; i++) {
+    result = result.replace(/(\d) (\d)/g, '$1$2')
+  }
+  return result
+}
+
 // 抽出テキストから来島者数（観光客数・空路・海路）をパース
 // 石垣市PDFの1ページ目: 月 | 観光客数 | 空路 | 海路 | ...
 function parseVisitorData(
   text: string,
   targetMonth: number
 ): { visitors: number | null; air: number | null; sea: number | null } {
+  const normalized = normalizeNumbers(text)
+
   // 5〜6桁のカンマ区切り数値を全て抽出
   const allNums: number[] = []
   const numRegex = /\b(\d{2,3}),(\d{3})\b/g
   let numMatch: RegExpExecArray | null
-  while ((numMatch = numRegex.exec(text)) !== null) {
+  while ((numMatch = numRegex.exec(normalized)) !== null) {
     const n = parseInt(numMatch[1] + numMatch[2], 10)
     if (n >= 5000 && n <= 999999) allNums.push(n)
   }
@@ -111,9 +126,9 @@ function parseVisitorData(
 
   // 月ヘッダー付近の数値グループを特定する
   const monthStr = `${targetMonth}\u6708` // 例: "1月"
-  const idx = text.indexOf(monthStr)
+  const idx = normalized.indexOf(monthStr)
   if (idx !== -1) {
-    const slice = text.slice(idx, idx + 200)
+    const slice = normalized.slice(idx, idx + 200)
     const sliceNums: number[] = []
     const sliceRegex = /\b(\d{2,3}),(\d{3})\b/g
     let sliceMatch: RegExpExecArray | null
@@ -181,9 +196,10 @@ export async function GET(request: Request) {
       const text = extractTextFromPDF(buffer)
       const parsed = parseVisitorData(text, month)
 
-      // デバッグ用: 抽出テキストの先頭500文字をレスポンスに含める
-      const textSample = text.slice(0, 500)
-      console.log(`[${year}/${month}] extracted:`, textSample)
+      // デバッグ用: 正規化後テキストの先頭500文字をレスポンスに含める
+      const normalized = normalizeNumbers(text)
+      const textSample = normalized.slice(0, 500)
+      console.log(`[${year}/${month}] normalized:`, textSample)
       console.log(`[${year}/${month}] parsed:`, parsed)
 
       const { error } = await supabaseAdmin
