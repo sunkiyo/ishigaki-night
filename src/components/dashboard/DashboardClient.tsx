@@ -208,7 +208,7 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
               },
               scales: {
                 x: { stacked: true, ticks: { color: '#a89070', font: { size: 9 } }, grid: { color: 'rgba(26,18,8,.05)' } },
-                y: { stacked: false, ticks: { color: '#a89070', font: { size: 9 }, callback: (v) => `${Math.round(Number(v) / 10000)}万` }, grid: { color: 'rgba(26,18,8,.05)' } },
+                y: { stacked: true, ticks: { color: '#a89070', font: { size: 9 }, callback: (v) => `${Math.round(Number(v) / 10000)}万` }, grid: { color: 'rgba(26,18,8,.05)' } },
               },
             }}
           />
