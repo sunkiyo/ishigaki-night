@@ -1,19 +1,29 @@
-// 既存の advertise.html の内容をReactコンポーネントとして移植
-// フォント・カラーはglobals.cssのCSS変数を使用
-
 import { setRequestLocale } from 'next-intl/server'
 
 const PLANS = [
   {
+    id: 'starter',
+    nameJa: 'スターター',
+    nameEn: 'Starter',
+    price: 2500,
+    tagJa: 'まず試してみたい方に',
+    tagEn: 'Just getting started',
+    features: {
+      ja: ['Web掲載（日本語）', '店舗詳細ページ', 'Googleマップリンク'],
+      en: ['Web listing (Japanese)', 'Spot detail page', 'Google Maps link'],
+    },
+    featured: false,
+  },
+  {
     id: 'basic',
     nameJa: 'ベーシック',
     nameEn: 'Basic',
-    price: 30000,
+    price: 5000,
     tagJa: '小さく始めたい方に',
     tagEn: 'To get started',
     features: {
-      ja: ['Web掲載（3言語）', '店舗詳細ページ', 'Googleマップ掲載', 'フリーペーパー小枠'],
-      en: ['Web listing (3 languages)', 'Spot detail page', 'Google Maps listing', 'Free paper small slot'],
+      ja: ['Web掲載（3言語）', '店舗詳細ページ', 'Googleマップリンク', 'クーポン発行'],
+      en: ['Web listing (3 languages)', 'Spot detail page', 'Google Maps link', 'Coupon'],
     },
     featured: false,
   },
@@ -21,12 +31,12 @@ const PLANS = [
     id: 'standard',
     nameJa: 'スタンダード',
     nameEn: 'Standard',
-    price: 50000,
+    price: 12000,
     tagJa: '集客に本気の方に',
     tagEn: 'For serious promotion',
     features: {
-      ja: ['Web掲載（3言語）', '写真撮影（毎月1回）', 'フリーペーパー中枠', 'SNS紹介（月2回）', 'クーポン発行'],
-      en: ['Web listing (3 languages)', 'Photo shoot (monthly)', 'Free paper mid slot', 'SNS feature (x2/month)', 'Coupon'],
+      ja: ['Web掲載（3言語）', '店舗詳細ページ', 'クーポン発行', 'SNS紹介（月2回）', 'フリーペーパー掲載'],
+      en: ['Web listing (3 languages)', 'Spot detail page', 'Coupon', 'SNS feature (×2/mo)', 'Free paper listing'],
     },
     featured: true,
   },
@@ -34,12 +44,12 @@ const PLANS = [
     id: 'premium',
     nameJa: 'プレミアム',
     nameEn: 'Premium',
-    price: 100000,
+    price: 25000,
     tagJa: 'メディア全面活用',
     tagEn: 'Full media exposure',
     features: {
-      ja: ['スタンダード全機能', 'フリーペーパー大枠・表紙連動', 'SNS紹介（週1回）', '動画制作（季節ごと）', '月次レポート'],
-      en: ['All Standard features', 'Free paper large + cover', 'SNS feature (weekly)', 'Seasonal video', 'Monthly report'],
+      ja: ['スタンダード全機能', 'フリーペーパー優先枠', 'SNS紹介（週1回）', '写真撮影サポート', '月次レポート'],
+      en: ['All Standard features', 'Free paper priority slot', 'SNS feature (weekly)', 'Photo shoot support', 'Monthly report'],
     },
     featured: false,
   },
@@ -81,9 +91,9 @@ export default async function AdvertisePage({
       {/* STATS */}
       <div className="grid grid-cols-3 gap-4 mb-20">
         {[
-          { num: '30万人', label: isJa ? '年間観光客数' : isZh ? '年遊客數' : 'Annual visitors' },
-          { num: '3言語', label: isJa ? '日英中で発信' : isZh ? '日英中發信' : 'JP / EN / ZH' },
-          { num: '¥0',   label: isJa ? '初期費用なし' : isZh ? '無初始費用' : 'No setup fee' },
+          { num: '150万人', label: isJa ? '年間観光客数（2025年実績）' : isZh ? '年遊客數（2025年實績）' : 'Annual visitors (2025)' },
+          { num: '4言語', label: isJa ? '日英中韓で発信' : isZh ? '日英中韓發信' : 'JP / EN / ZH / KO' },
+          { num: '¥0',    label: isJa ? '初期費用なし' : isZh ? '無初始費用' : 'No setup fee' },
         ].map((s) => (
           <div key={s.num} className="border border-stone-200 rounded-xl p-6 text-center bg-surface">
             <div className="font-mincho text-3xl font-semibold text-gold mb-2">{s.num}</div>
@@ -96,7 +106,7 @@ export default async function AdvertisePage({
       <h2 className="font-mincho text-2xl font-semibold mb-8 text-center">
         {isJa ? '掲載プラン' : isZh ? '刊登方案' : 'Plans'}
       </h2>
-      <div className="grid md:grid-cols-3 gap-5 mb-20">
+      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5 mb-20">
         {PLANS.map((plan) => (
           <div
             key={plan.id}
