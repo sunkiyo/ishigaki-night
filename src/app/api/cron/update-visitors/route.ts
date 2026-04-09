@@ -81,35 +81,42 @@ function extractTextFromPDF(buffer: Buffer): string {
   return parts.join(' ')
 }
 
-// PDFのカーニングによるスペース入り数字を正規化
-// "1 7 4 , 1 8 1" → "174,181" / "84, 346" → "84,346"
-// ※ 数字間の不要な結合を防ぐため、単一桁のみを対象にする
-function normalizeNumbers(text: string): string {
-  let result = text
-  // Step1: カンマ前後のスペース除去: "84, 346" → "84,346"
-  result = result.replace(/(\d)\s*,\s*(\d)/g, '$1,$2')
-  // Step2: 単一桁がスペース区切りで並ぶ列を結合: "\b1 7 4\b" → "174"
-  // \b(\d)( \d)+ は「単語境界から始まる単一桁の連続」のみマッチ
-  // → 多桁の連続数字(84, 346等)は\b後に複数桁が続くためマッチしない
-  result = result.replace(/\b(\d)( \d)+/g, (match) => match.replace(/ /g, ''))
-  return result
+// 生テキストから5〜6桁の来島者数候補を抽出
+// スペース入り数字（"1 7 4 , 1 8 1"）と通常数字（"84,346" / "84, 346"）を両方対応
+// (?<![,\d]) で "1,221,986" の "221,986" 部分を誤抽出しない
+function extractVisitorNumbers(text: string): number[] {
+  const nums: number[] = []
+  // 左辺: 2〜3桁の連続数字 or スペース区切り1+1〜2桁
+  // 右辺: 3桁の連続数字 or スペース区切り1+1+1桁
+  const numRegex =
+    /(?<![,\d])\b(\d{2,3}|\d(?:\s\d){1,2})\s*,\s*(\d{3}|\d(?:\s\d){2})\b/g
+  let m: RegExpExecArray | null
+  while ((m = numRegex.exec(text)) !== null) {
+    const n = parseInt(m[1].replace(/\s/g, '') + m[2].replace(/\s/g, ''), 10)
+    if (n >= 5000 && n <= 999999) nums.push(n)
+  }
+  return nums
 }
 
-// air + sea = total の整合性を持つ3数値を探す
+// air + sea = total の整合性を持つ3数値を探す（最も差が小さいものを優先）
 // 石垣市PDF: 来島者数（合計）= 空路 + 海路
 function findConsistentTriplet(
   nums: number[]
 ): { visitors: number; air: number; sea: number } | null {
-  const candidates = nums.slice(0, 20)
+  const candidates = nums.slice(0, 25)
+  let best: { visitors: number; air: number; sea: number } | null = null
+  let bestDiff = 201
+
   for (let i = 0; i < candidates.length; i++) {
     for (let j = i + 1; j < candidates.length; j++) {
       const sum = candidates[i] + candidates[j]
-      // 月間来島者数として妥当な範囲: 50,000〜400,000
       if (sum < 50000 || sum > 400000) continue
       for (let k = 0; k < candidates.length; k++) {
         if (k === i || k === j) continue
-        if (Math.abs(candidates[k] - sum) <= 200) {
-          return {
+        const diff = Math.abs(candidates[k] - sum)
+        if (diff < bestDiff) {
+          bestDiff = diff
+          best = {
             visitors: candidates[k],
             air: Math.max(candidates[i], candidates[j]),
             sea: Math.min(candidates[i], candidates[j]),
@@ -118,7 +125,8 @@ function findConsistentTriplet(
       }
     }
   }
-  return null
+
+  return bestDiff <= 200 ? best : null
 }
 
 // 抽出テキストから来島者数（観光客数・空路・海路）をパース
@@ -126,43 +134,28 @@ function parseVisitorData(
   text: string,
   targetMonth: number
 ): { visitors: number | null; air: number | null; sea: number | null; allNums: number[] } {
-  const normalized = normalizeNumbers(text)
-
-  // 5〜6桁のカンマ区切り数値を全て抽出
-  const allNums: number[] = []
-  const numRegex = /\b(\d{2,3}),(\d{3})\b/g
-  let numMatch: RegExpExecArray | null
-  while ((numMatch = numRegex.exec(normalized)) !== null) {
-    const n = parseInt(numMatch[1] + numMatch[2], 10)
-    if (n >= 5000 && n <= 999999) allNums.push(n)
-  }
+  const allNums = extractVisitorNumbers(text)
 
   if (allNums.length < 3) {
     return { visitors: null, air: null, sea: null, allNums }
   }
 
   // 月ヘッダー付近の数値グループを特定する（PDFが日本語テキストを含む場合）
-  const monthStr = `${targetMonth}\u6708`
-  const idx = normalized.indexOf(monthStr)
+  const monthStr = `${targetMonth}\u6708` // 例: "2月"
+  const idx = text.indexOf(monthStr)
   if (idx !== -1) {
-    const slice = normalized.slice(idx, idx + 200)
-    const sliceNums: number[] = []
-    const sliceRegex = /\b(\d{2,3}),(\d{3})\b/g
-    let sliceMatch: RegExpExecArray | null
-    while ((sliceMatch = sliceRegex.exec(slice)) !== null) {
-      const n = parseInt(sliceMatch[1] + sliceMatch[2], 10)
-      if (n >= 5000) sliceNums.push(n)
-    }
+    const slice = text.slice(idx, idx + 300)
+    const sliceNums = extractVisitorNumbers(slice)
     if (sliceNums.length >= 3) {
+      const triplet = findConsistentTriplet(sliceNums)
+      if (triplet) return { ...triplet, allNums }
       return { visitors: sliceNums[0], air: sliceNums[1], sea: sliceNums[2], allNums }
     }
   }
 
-  // air + sea = total の整合性チェックで正しい3値を特定
+  // air + sea = total の整合性チェックで最も精度の高い3値を特定
   const triplet = findConsistentTriplet(allNums)
-  if (triplet) {
-    return { ...triplet, allNums }
-  }
+  if (triplet) return { ...triplet, allNums }
 
   // フォールバック: 先頭3つの大きな数値
   return {
@@ -218,7 +211,7 @@ export async function GET(request: Request) {
       const parsed = parseVisitorData(text, month)
       const { allNums, ...parsedValues } = parsed
 
-      console.log(`[${year}/${month}] allNums:`, allNums.slice(0, 10))
+      console.log(`[${year}/${month}] allNums(top10):`, allNums.slice(0, 10))
       console.log(`[${year}/${month}] parsed:`, parsedValues)
 
       const { error } = await supabaseAdmin
@@ -237,9 +230,20 @@ export async function GET(request: Request) {
         )
 
       if (error) {
-        results.push({ year, month, status: `db_error: ${error.message}`, allNums: allNums.slice(0, 10) })
+        results.push({
+          year,
+          month,
+          status: `db_error: ${error.message}`,
+          allNums: allNums.slice(0, 10),
+        })
       } else {
-        results.push({ year, month, status: 'updated', ...parsedValues, allNums: allNums.slice(0, 10) })
+        results.push({
+          year,
+          month,
+          status: 'updated',
+          ...parsedValues,
+          allNums: allNums.slice(0, 10),
+        })
       }
     } catch (err) {
       results.push({ year, month, status: `error: ${String(err)}` })
