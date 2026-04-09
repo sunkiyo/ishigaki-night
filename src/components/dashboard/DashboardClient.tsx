@@ -157,9 +157,25 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
 
       {/* 来島者数グラフ */}
       <div className="bg-surface border border-stone-200 rounded-xl p-5">
-        <p className="text-sm font-medium text-stone-700 mb-1">
-          {lang === 'ja' ? `月別来島者数・内訳・予測（${wareki(latestY)}）` : `Monthly Visitors — Air/Sea/Forecast (${latestY})`}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+          <p className="text-sm font-medium text-stone-700">
+            {lang === 'ja' ? `月別来島者数・内訳・予測（${wareki(latestY)}）` : `Monthly Visitors — Air/Sea/Forecast (${latestY})`}
+          </p>
+          <div className="flex items-center gap-3 text-xs text-stone-500">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-6 h-2 rounded-sm" style={{ background: 'rgba(78,168,245,.75)' }} />
+              {lang === 'ja' ? '空路' : 'Air'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-6 h-2 rounded-sm" style={{ background: 'rgba(45,212,191,.75)' }} />
+              {lang === 'ja' ? '海路' : 'Sea'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-6 h-0.5 rounded-full" style={{ background: 'rgba(107,117,133,.55)' }} />
+              {lang === 'ja' ? `前年（${wareki(latestY - 1).replace('年', '')}年）` : String(latestY - 1)}
+            </span>
+          </div>
+        </div>
         <p className="text-xs text-stone-400 mb-4">
           {lang === 'ja' ? '出典：石垣市観光文化課「入域観光推計」' : 'Source: Ishigaki City Tourism Division'}
         </p>
