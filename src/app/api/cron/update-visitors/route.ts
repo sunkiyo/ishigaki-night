@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 // PDFのURLを生成
 // ファイル名パターン: nyuikisuikei[西暦下2桁][月2桁].pdf
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
     const month = targetDate.getMonth() + 1
 
     // DBに既存データがあればスキップ
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('visitor_monthly')
       .select('id, visitors')
       .eq('year', year)
@@ -131,7 +131,7 @@ export async function GET(request: Request) {
       console.log(`[${year}/${month}] extracted text sample:`, text.slice(0, 300))
       console.log(`[${year}/${month}] parsed:`, parsed)
 
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('visitor_monthly')
         .upsert(
           {
