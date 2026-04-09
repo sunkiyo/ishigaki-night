@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { inflateSync } from 'zlib'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 // PDFのURLを生成
@@ -10,27 +11,80 @@ function buildPdfUrl(year: number, month: number): string {
   return `https://www.city.ishigaki.okinawa.jp/material/files/group/11/nyuikisuikei${yy}${mm}.pdf`
 }
 
-// ライブラリ不要のPDFテキスト抽出
-// Excelエクスポート系PDFのコンテンツストリームから (text) Tj / [(text)] TJ 形式でテキストを取り出す
+// FlateDecode圧縮ストリームを含むPDFからテキストを抽出
+// Buffer操作でstream/endstreamを検出 → zlibで解凍 → Tj/TJ演算子でテキスト収集
 function extractTextFromPDF(buffer: Buffer): string {
-  const raw = buffer.toString('latin1')
   const parts: string[] = []
 
-  // (テキスト) Tj 形式
-  const tjRegex = /\(([^)\\]{0,200})\)\s*Tj/g
-  let tjMatch: RegExpExecArray | null
-  while ((tjMatch = tjRegex.exec(raw)) !== null) {
-    parts.push(tjMatch[1])
-  }
-  // [(テキスト) ...] TJ 形式
-  const tjArrayRegex = /\[([^\]]{0,500})\]\s*TJ/g
-  let tjArrayMatch: RegExpExecArray | null
-  while ((tjArrayMatch = tjArrayRegex.exec(raw)) !== null) {
-    const innerRegex = /\(([^)\\]{0,100})\)/g
-    let innerMatch: RegExpExecArray | null
-    while ((innerMatch = innerRegex.exec(tjArrayMatch[1])) !== null) {
-      parts.push(innerMatch[1])
+  const streamMarker = Buffer.from('stream')
+  const endStreamMarker = Buffer.from('endstream')
+
+  let pos = 0
+  while (pos < buffer.length) {
+    // 'stream' キーワードを探す
+    const streamPos = buffer.indexOf(streamMarker, pos)
+    if (streamPos === -1) break
+
+    // stream の直後は \r\n か \n
+    let dataStart = streamPos + streamMarker.length
+    if (buffer[dataStart] === 0x0d && buffer[dataStart + 1] === 0x0a) {
+      dataStart += 2
+    } else if (buffer[dataStart] === 0x0a) {
+      dataStart += 1
+    } else {
+      pos = streamPos + 1
+      continue
     }
+
+    // 対応する endstream を探す
+    const endStreamPos = buffer.indexOf(endStreamMarker, dataStart)
+    if (endStreamPos === -1) break
+
+    // endstream 直前の \r\n or \n を除去
+    let dataEnd = endStreamPos
+    if (buffer[dataEnd - 1] === 0x0a) dataEnd--
+    if (dataEnd > 0 && buffer[dataEnd - 1] === 0x0d) dataEnd--
+
+    const streamData = buffer.subarray(dataStart, dataEnd)
+
+    // stream オブジェクトのヘッダーを確認（直前500バイト）
+    const headerArea = buffer
+      .subarray(Math.max(0, streamPos - 500), streamPos)
+      .toString('latin1')
+    const isFlateDecode =
+      headerArea.includes('FlateDecode') || headerArea.includes('/Fl ')
+
+    let content = ''
+    if (isFlateDecode) {
+      try {
+        content = inflateSync(streamData).toString('latin1')
+      } catch {
+        // inflate失敗はスキップ
+        pos = endStreamPos + endStreamMarker.length
+        continue
+      }
+    } else {
+      content = streamData.toString('latin1')
+    }
+
+    // (テキスト) Tj 形式
+    const tjRegex = /\(([^)\\]{0,200})\)\s*Tj/g
+    let tjMatch: RegExpExecArray | null
+    while ((tjMatch = tjRegex.exec(content)) !== null) {
+      parts.push(tjMatch[1])
+    }
+    // [(テキスト) ...] TJ 形式
+    const tjArrayRegex = /\[([^\]]{0,500})\]\s*TJ/g
+    let tjArrayMatch: RegExpExecArray | null
+    while ((tjArrayMatch = tjArrayRegex.exec(content)) !== null) {
+      const innerRegex = /\(([^)\\]{0,100})\)/g
+      let innerMatch: RegExpExecArray | null
+      while ((innerMatch = innerRegex.exec(tjArrayMatch[1])) !== null) {
+        parts.push(innerMatch[1])
+      }
+    }
+
+    pos = endStreamPos + endStreamMarker.length
   }
 
   return parts.join(' ')
@@ -127,8 +181,9 @@ export async function GET(request: Request) {
       const text = extractTextFromPDF(buffer)
       const parsed = parseVisitorData(text, month)
 
-      // デバッグ用: 抽出テキストの先頭300文字をログ
-      console.log(`[${year}/${month}] extracted text sample:`, text.slice(0, 300))
+      // デバッグ用: 抽出テキストの先頭500文字をレスポンスに含める
+      const textSample = text.slice(0, 500)
+      console.log(`[${year}/${month}] extracted:`, textSample)
       console.log(`[${year}/${month}] parsed:`, parsed)
 
       const { error } = await supabaseAdmin
@@ -147,9 +202,9 @@ export async function GET(request: Request) {
         )
 
       if (error) {
-        results.push({ year, month, status: `db_error: ${error.message}` })
+        results.push({ year, month, status: `db_error: ${error.message}`, textSample })
       } else {
-        results.push({ year, month, status: 'updated', ...parsed })
+        results.push({ year, month, status: 'updated', ...parsed, textSample })
       }
     } catch (err) {
       results.push({ year, month, status: `error: ${String(err)}` })
