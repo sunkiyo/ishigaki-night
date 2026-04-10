@@ -3,97 +3,66 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60  // Claude API呼び出しのため60秒
-
-// イベント情報を取得するURLリスト
-const EVENT_SOURCES = [
-  { url: 'https://painushima.com/events/',                       label: '石垣市観光交流協会' },
-  { url: 'https://ishigaki.co/',                                 label: '石垣島ドットコム' },
-  { url: 'https://okinawa.yoshimoto.co.jp/ishigaki/',            label: '石垣島よしもと' },
-  { url: 'https://www.jta.co.jp/routemap/ishigaki/event.html',   label: 'JTA石垣イベント' },
-  { url: 'https://www.visit-okinawa.jp/eventinfo/',              label: '沖縄観光コンベンションビューロー' },
-]
-
-// HTMLからテキストを抽出（タグ除去・圧縮）
-function stripHtml(html: string, maxLen = 4000): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')  // script除去
-    .replace(/<style[\s\S]*?<\/style>/gi, '')    // style除去
-    .replace(/<[^>]+>/g, ' ')                   // タグ除去
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, maxLen)
-}
-
-// 複数ソースからイベント情報テキストを収集
-async function fetchSourceTexts(): Promise<{ label: string; text: string }[]> {
-  const results: { label: string; text: string }[] = []
-  await Promise.allSettled(
-    EVENT_SOURCES.map(async ({ url, label }) => {
-      try {
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(12000),
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ishigaki-night-bot/1.0)' },
-        })
-        if (!res.ok) return
-        const html = await res.text()
-        const text = stripHtml(html)
-        if (text.length > 100) results.push({ label, text })
-      } catch {
-        // タイムアウト・接続失敗はスキップ
-      }
-    })
-  )
-  return results
-}
+export const maxDuration = 60
 
 type ExtractedEvent = {
-  event_date: string       // YYYY-MM-DD
-  event_end_date?: string  // YYYY-MM-DD (省略可)
+  event_date: string
+  event_end_date?: string
   event_name: string
   event_name_en?: string
   category: 'festival' | 'sports' | 'music' | 'marine' | 'food' | 'other'
-  demand_boost?: number    // 0.0〜0.5
+  demand_boost?: number
   venue?: string
   note?: string
 }
 
-// Claude Haiku でイベント抽出
-async function extractEventsWithClaude(sources: { label: string; text: string }[]): Promise<ExtractedEvent[]> {
+/**
+ * Claudeの知識から石垣島の今後イベントを生成する
+ * スクレイピング不要・Vercelのネットワーク制限に非依存
+ */
+async function generateEventsWithClaude(): Promise<ExtractedEvent[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey || sources.length === 0) return []
+  if (!apiKey) return []
 
   const client = new Anthropic({ apiKey })
-  const today  = new Date().toISOString().slice(0, 10)
-  const until  = new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString().slice(0, 10) // 90日先まで
+  const today = new Date().toISOString().slice(0, 10)
+  const until = new Date(Date.now() + 90 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  const year  = new Date().getFullYear()
 
-  const sourceText = sources.map(s => `=== ${s.label} ===\n${s.text}`).join('\n\n')
+  const prompt = `あなたは石垣島・八重山諸島の観光イベントに詳しいアシスタントです。
 
-  const prompt = `以下は石垣島の観光・地域情報サイトのテキストです。
-今日(${today})から${until}までの石垣島で開催されるイベントを抽出してください。
+今日は${today}です。${today}から${until}の間に石垣島・八重山諸島で開催される可能性が高いイベントをリストアップしてください。
 
-抽出ルール:
-- 確認できる日付があるイベントのみ（推測禁止）
-- 今日以降のイベントのみ
-- 石垣島・八重山諸島で開催されるもの
+以下の年間定番イベントを参考にしてください（毎年ほぼ同時期に開催）:
+- 1月第3日曜: 石垣島マラソン
+- 3月下旬〜4月上旬: 海びらき
+- 4月下旬〜5月上旬: ゴールデンウィーク
+- 旧暦5月4日頃(5〜6月): ハーリー（爬竜船漕ぎ大会）
+- 6月上旬: 石垣島ウルトラマラソン
+- 7〜8月: 石垣島サマーフェスタ
+- 旧盆(8月中旬): アンガマ
+- 8月下旬: 石垣島星まつり
+- 9月第1〜2週: 八重山まつり（石垣島最大の祭り）
+- 10月下旬〜11月: 石垣市産業まつり
+- 11月: 石垣島ハーフマラソン
+- 12月31日: 年越しカウントダウン
 
-JSON配列で返してください（他のテキスト不要）:
+ルール:
+- 今日(${today})から${until}の範囲のイベントのみ
+- 年は${year}または${year + 1}で、実際の日程に近い日付を推定
+- 確実性が低いものは demand_boost を低めに設定
+
+JSON配列のみ返してください（説明文不要）:
 [{
   "event_date": "YYYY-MM-DD",
-  "event_end_date": "YYYY-MM-DD または省略",
+  "event_end_date": "YYYY-MM-DD（複数日の場合のみ）",
   "event_name": "イベント名（日本語）",
   "event_name_en": "Event Name in English",
   "category": "festival|sports|music|marine|food|other",
-  "demand_boost": 0.10〜0.45（超大型祭り=0.40、大型=0.25、中型=0.15、小型=0.10）,
-  "venue": "会場名（不明なら省略）",
-  "note": "補足（省略可）"
-}]
-
-イベントが見つからない場合は [] を返してください。
-
-テキスト:
-${sourceText}`
+  "demand_boost": 0.10〜0.45,
+  "venue": "会場名",
+  "note": "毎年○月頃開催など補足"
+}]`
 
   try {
     const msg = await client.messages.create({
@@ -103,53 +72,38 @@ ${sourceText}`
     })
 
     const raw = (msg.content[0] as { type: string; text: string }).text.trim()
-    // JSONのみ抽出（マークダウンコードブロック対応）
     const jsonMatch = raw.match(/\[[\s\S]*\]/)
     if (!jsonMatch) return []
     return JSON.parse(jsonMatch[0]) as ExtractedEvent[]
   } catch (e) {
-    console.error('Claude extraction failed:', e)
+    console.error('Claude generation failed:', e)
     return []
   }
 }
 
 export async function GET() {
-  // 一時的に認証をスキップ（テスト後に戻す）
-  // const authHeader = request.headers.get('authorization')
-  // if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  // }
-
   const supabase = getSupabaseAdmin()
-  const debug: Record<string, unknown> = {}
+  const debug: Record<string, unknown> = { has_api_key: !!process.env.ANTHROPIC_API_KEY, mode: 'claude-knowledge' }
 
-  // Step1: ソースからテキスト収集
-  const sources = await fetchSourceTexts()
-  debug.sources_fetched = sources.map(s => ({ label: s.label, chars: s.text.length }))
+  // Claudeの知識からイベント生成
+  const generated = await generateEventsWithClaude()
+  debug.generated_count = generated.length
 
-  // Step2: Claude で抽出
-  const extracted = await extractEventsWithClaude(sources)
-  debug.extracted_count = extracted.length
-  debug.has_api_key = !!process.env.ANTHROPIC_API_KEY
-
-  if (extracted.length === 0) {
+  if (generated.length === 0) {
     return NextResponse.json({
-      success: true,
-      message: sources.length === 0
-        ? 'ソースURLに接続できませんでした。手動でSupabaseから更新してください。'
-        : 'イベント情報が見つかりませんでした（サイト構造変更の可能性）',
+      success: false,
+      message: 'ANTHROPIC_API_KEY が未設定か、生成に失敗しました',
       upserted: 0,
       debug,
     })
   }
 
-  // Step3: Supabaseにupsert（event_date + event_name でユニーク判定）
+  // Supabaseにupsert（同名・同日はスキップ）
   let upserted = 0
   let skipped  = 0
   const errors: string[] = []
 
-  for (const ev of extracted) {
-    // 既存チェック（同名・同日は上書きしない）
+  for (const ev of generated) {
     const { data: existing } = await supabase
       .from('ishigaki_events')
       .select('id')
@@ -168,8 +122,8 @@ export async function GET() {
       demand_boost:   ev.demand_boost ?? 0.10,
       venue:          ev.venue ?? null,
       note:           ev.note ?? null,
-      is_confirmed:   false,  // 自動取得は未確認フラグ
-      source_url:     'auto',
+      is_confirmed:   false,  // AI生成は未確認フラグ
+      source_url:     'claude-knowledge',
     })
     if (error) errors.push(`${ev.event_name}: ${error.message}`)
     else upserted++
@@ -181,6 +135,7 @@ export async function GET() {
     skipped,
     errors,
     debug,
+    events: generated.map(e => ({ date: e.event_date, name: e.event_name })),
     timestamp: new Date().toISOString(),
   })
 }
