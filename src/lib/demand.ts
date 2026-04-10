@@ -23,7 +23,7 @@ export function calcIndex(t: number, p: number, h: number): number {
 }
 
 export function getStatus(index: number): 'hot' | 'warm' | 'normal' | 'cool' {
-  if (index >= 75) return 'hot'
+  if (index >= 85) return 'hot'
   if (index >= 55) return 'warm'
   if (index >= 35) return 'normal'
   return 'cool'

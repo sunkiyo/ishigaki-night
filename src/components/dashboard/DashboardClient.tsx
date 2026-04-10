@@ -27,7 +27,7 @@ const STATUS_CONFIG = {
 }
 
 function gaugeColor(idx: number) {
-  if (idx >= 75) return '#f05350'
+  if (idx >= 85) return '#f05350'
   if (idx >= 55) return '#d4923f'
   if (idx >= 35) return '#3ec768'
   return '#4ea8f5'
@@ -54,16 +54,38 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const cur     = officialData[latestY]
   const prevY   = officialData[latestY - 1]
 
-  // 今週の需要指数カード用: 最新の実績エントリを中心に前後3週ずつ、計7本
-  const latestActualIdx = history.reduce((acc, r, i) => (!r.isForecast ? i : acc), 0)
-  const weekStart   = Math.max(0, latestActualIdx - 3)
-  const weekEntries = history.slice(weekStart, weekStart + 7)
-
   // 日付を "M/D" 形式に変換するヘルパー
   const fmtDate = (dateStr: string) => {
     const [, m, d] = dateStr.split('-')
     return `${Number(m)}/${Number(d)}`
   }
+
+  // 今週（月〜日）の日別需要指数を生成
+  // 夜の繁華街向け曜日係数: 月〜日
+  const DOW_MULTIPLIERS = [0.55, 0.62, 0.72, 0.82, 1.22, 1.32, 0.88]
+  const DOW_LABELS_JA   = ['月', '火', '水', '木', '金', '土', '日']
+  const todayJs   = new Date()
+  const todayDow  = todayJs.getDay() // 0=Sun
+  const mondayJs  = new Date(todayJs)
+  mondayJs.setDate(todayJs.getDate() - ((todayDow + 6) % 7))
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(mondayJs)
+    d.setDate(mondayJs.getDate() + i)
+    const isToday   = d.toDateString() === todayJs.toDateString()
+    const isFuture  = d > todayJs
+    const dailyIdx  = Math.min(100, Math.round(idx * DOW_MULTIPLIERS[i]))
+    return {
+      label: [DOW_LABELS_JA[i], `${d.getMonth() + 1}/${d.getDate()}`] as [string, string],
+      index: dailyIdx,
+      isToday,
+      isFuture,
+    }
+  })
+
+  // 需要指数グラフ: 過去8週の実績 + 全予測エントリ
+  const actualEntries   = history.filter((r) => !r.isForecast)
+  const forecastEntries = history.filter((r) => r.isForecast)
+  const displayHistory  = [...actualEntries.slice(-8), ...forecastEntries]
 
   if (!mounted) return <div className="h-96 flex items-center justify-center text-stone-400 text-sm">Loading...</div>
 
@@ -73,7 +95,7 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
       {/* HERO BAND */}
       <div className="grid md:grid-cols-3 gap-4">
 
-        {/* 今週の需要指数 — 前後3週を含む7本棒グラフ */}
+        {/* 今週の需要指数 — 曜日別（月〜日）棒グラフ */}
         <div className="bg-surface border border-stone-200 rounded-xl p-5 flex flex-col">
           <div className="flex items-center justify-between mb-0.5">
             <p className="text-xs tracking-widest uppercase text-stone-400">
@@ -87,21 +109,23 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
             </span>
           </div>
           <p className="text-xs text-stone-400 mb-3">
-            {lang === 'ja' ? '前後3週の推移（週始め日付）' : '±3 weeks trend'}
+            {lang === 'ja' ? '曜日別の予測需要（今日以降は推定）' : 'Daily demand estimate this week'}
           </p>
           <div style={{ flex: 1, minHeight: 130 }}>
             <Bar
               data={{
-                labels: weekEntries.map((r) => fmtDate(r.date)),
+                labels: weekDays.map((d) => d.label),
                 datasets: [{
-                  data: weekEntries.map((r) => r.index),
-                  backgroundColor: weekEntries.map((r) =>
-                    r.isForecast ? 'rgba(200,200,200,.35)' : gaugeColor(r.index) + 'aa'
+                  data: weekDays.map((d) => d.index),
+                  backgroundColor: weekDays.map((d) =>
+                    d.isFuture
+                      ? gaugeColor(d.index) + '44'
+                      : gaugeColor(d.index) + 'aa'
                   ),
-                  borderColor: weekEntries.map((r) =>
-                    r.isForecast ? 'rgba(150,150,150,.7)' : gaugeColor(r.index)
+                  borderColor: weekDays.map((d) =>
+                    d.isToday ? '#1a1208' : gaugeColor(d.index)
                   ),
-                  borderWidth: 1,
+                  borderWidth: weekDays.map((d) => d.isToday ? 2 : 1),
                   borderRadius: 3,
                 }],
               }}
@@ -113,8 +137,8 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
                   tooltip: {
                     callbacks: {
                       title: (items) => {
-                        const entry = weekEntries[items[0].dataIndex]
-                        return `${fmtDate(entry.date)}週${entry.isForecast ? '（予測）' : '（実績）'}`
+                        const d = weekDays[items[0].dataIndex]
+                        return `${d.label[0]}曜 ${d.label[1]}${d.isToday ? '（今日）' : d.isFuture ? '（推定）' : ''}`
                       },
                       label: (item) => `需要指数: ${item.raw}`,
                     },
@@ -132,16 +156,9 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
               }}
             />
           </div>
-          <div className="flex gap-3 text-xs text-stone-400 mt-2">
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-4 h-2 rounded-sm" style={{ background: '#d4923faa' }} />
-              {lang === 'ja' ? '実績' : 'Actual'}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block w-4 h-2 rounded-sm" style={{ background: 'rgba(200,200,200,.35)', border: '1px dashed #aaa' }} />
-              {lang === 'ja' ? '予測' : 'Forecast'}
-            </span>
-          </div>
+          <p className="text-xs text-stone-400 mt-2">
+            {lang === 'ja' ? '太枠＝今日　薄色＝今日以降の推定' : 'Bold border = today, light = estimated'}
+          </p>
         </div>
 
         {/* ゲージ */}
@@ -321,16 +338,16 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
         <div style={{ height: 220 }}>
           <Bar
             data={{
-              labels: history.map((r) => fmtDate(r.date)),
+              labels: displayHistory.map((r) => fmtDate(r.date)),
               datasets: [{
-                data: history.map((r) => r.index),
-                backgroundColor: history.map((r) =>
-                  (r as { isForecast?: boolean }).isForecast
+                data: displayHistory.map((r) => r.index),
+                backgroundColor: displayHistory.map((r) =>
+                  r.isForecast
                     ? 'rgba(200,200,200,.35)'
                     : gaugeColor(r.index) + 'aa'
                 ),
-                borderColor: history.map((r) =>
-                  (r as { isForecast?: boolean }).isForecast
+                borderColor: displayHistory.map((r) =>
+                  r.isForecast
                     ? 'rgba(150,150,150,.7)'
                     : gaugeColor(r.index)
                 ),
@@ -346,7 +363,7 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
                 tooltip: {
                   callbacks: {
                     title: (items) => {
-                      const r = history[items[0].dataIndex]
+                      const r = displayHistory[items[0].dataIndex]
                       return `${fmtDate(r.date)}週${r.isForecast ? '（予測）' : '（実績）'}`
                     },
                     label: (item) => `需要指数: ${item.raw} / 100`,
@@ -396,65 +413,83 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
           {lang === 'ja' ? '今後4週間 お店推奨アクション' : 'Next 4 Weeks — Recommended Actions'}
         </p>
         <p className="text-xs text-stone-400 mb-4">
-          {lang === 'ja' ? '需要予測にもとづくお店向け提案' : 'Store recommendations based on demand forecast'}
+          {lang === 'ja' ? '業種別・需要予測にもとづくお店向け提案' : 'Per-category recommendations based on demand forecast'}
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-stone-200">
-                <th className="text-left py-2 pr-4 text-stone-400 font-normal whitespace-nowrap">
-                  {lang === 'ja' ? '週' : 'Week'}
-                </th>
-                <th className="text-left py-2 pr-4 text-stone-400 font-normal whitespace-nowrap">
-                  {lang === 'ja' ? '需要予測' : 'Forecast'}
-                </th>
-                <th className="text-left py-2 text-stone-400 font-normal">
-                  {lang === 'ja' ? 'お店推奨アクション' : 'Recommended Action'}
-                </th>
+                <th className="text-left py-2 pr-3 text-stone-400 font-normal whitespace-nowrap">{lang === 'ja' ? '週' : 'Week'}</th>
+                <th className="text-left py-2 pr-3 text-stone-400 font-normal whitespace-nowrap">{lang === 'ja' ? '需要予測' : 'Forecast'}</th>
+                <th className="text-left py-2 pr-3 text-stone-400 font-normal whitespace-nowrap">{lang === 'ja' ? '業種' : 'Type'}</th>
+                <th className="text-left py-2 text-stone-400 font-normal">{lang === 'ja' ? '推奨アクション' : 'Action'}</th>
               </tr>
             </thead>
             <tbody>
-              {[
+              {([
                 {
-                  week: '4/13〜',
-                  index: 88,
-                  badge: '🔴',
+                  week: '4/13〜', index: 88, badge: '🔴',
                   status: lang === 'ja' ? '激混み' : 'Peak',
-                  action: lang === 'ja' ? 'DJイベント開催・スタッフ2倍体制' : 'Host DJ events & double staffing',
+                  rows: [
+                    { icon: '🍸', type: 'バー',      action: lang === 'ja' ? 'DJイベント・ライブ開催、カクテル特別メニューで客単価UP' : 'DJ events & premium cocktail menu' },
+                    { icon: '💃', type: 'キャバクラ', action: lang === 'ja' ? '指名予約を優先受付・シャンパンタワーキャンペーン告知' : 'Priority reservations & champagne promos' },
+                    { icon: '🍺', type: '居酒屋',    action: lang === 'ja' ? '飲み放題プランを前面訴求・仕込みと仕入れを増量' : 'Push all-you-can-drink plans & stock up' },
+                  ],
                 },
                 {
-                  week: '4/20〜',
-                  index: 92,
-                  badge: '🔴',
+                  week: '4/20〜', index: 92, badge: '🔴',
                   status: lang === 'ja' ? '激混み' : 'Peak',
-                  action: lang === 'ja' ? 'SNS告知最大化・予約受付開始' : 'Max SNS promotions & open reservations',
+                  rows: [
+                    { icon: '🍸', type: 'バー',      action: lang === 'ja' ? 'SNS告知を最大化・スタッフ増員でキャパシティ確保' : 'Max SNS outreach & increase staff' },
+                    { icon: '💃', type: 'キャバクラ', action: lang === 'ja' ? 'GWスペシャルイベント開催・新人キャスト積極起用' : 'GW special event & feature new staff' },
+                    { icon: '🍺', type: '居酒屋',    action: lang === 'ja' ? '回転率重視の席づくり・テーブルチャージで売上UP' : 'Optimize table turnover & add table charge' },
+                  ],
                 },
                 {
-                  week: '4/27〜',
-                  index: 89,
-                  badge: '🔴',
+                  week: '4/27〜', index: 89, badge: '🔴',
                   status: lang === 'ja' ? '激混み' : 'Peak',
-                  action: lang === 'ja' ? '売上最大化週・特別メニュー投入' : 'Peak revenue week — special menus',
+                  rows: [
+                    { icon: '🍸', type: 'バー',      action: lang === 'ja' ? 'GW最終週で高単価狙い・プレミアムカクテルを前面に' : 'Push premium cocktails for GW finale' },
+                    { icon: '💃', type: 'キャバクラ', action: lang === 'ja' ? 'GWラスト告知・延長・同伴プランで滞在時間を延ばす' : 'GW last-day promos & companion plans' },
+                    { icon: '🍺', type: '居酒屋',    action: lang === 'ja' ? '〆メニュー充実・GW疲れの観光客を取り込む' : 'Late-night specials for tired tourists' },
+                  ],
                 },
                 {
-                  week: '5/11〜',
-                  index: 62,
-                  badge: '🟡',
+                  week: '5/11〜', index: 62, badge: '🟡',
                   status: lang === 'ja' ? 'にぎわい' : 'Busy',
-                  action: lang === 'ja' ? 'GW明けの常連客対応・クーポン施策' : 'Post-GW regulars & coupon campaign',
+                  rows: [
+                    { icon: '🍸', type: 'バー',      action: lang === 'ja' ? 'GW明け地元客向けクーポン・ハッピーアワー延長' : 'Local coupons & extended happy hour' },
+                    { icon: '💃', type: 'キャバクラ', action: lang === 'ja' ? '体験入店キャンペーン・リピーター向けポイント施策' : 'Trial visit campaign & loyalty points' },
+                    { icon: '🍺', type: '居酒屋',    action: lang === 'ja' ? '常連向け季節メニュー刷新・地元イベントに協賛' : 'Seasonal menu refresh & local tie-ups' },
+                  ],
                 },
-              ].map((row) => (
-                <tr key={row.week} className="border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors">
-                  <td className="py-3 pr-4 text-stone-600 font-medium whitespace-nowrap">{row.week}</td>
-                  <td className="py-3 pr-4 whitespace-nowrap">
-                    <span className="flex items-center gap-1">
-                      <span>{row.badge}</span>
-                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: row.index >= 75 ? '#f05350' : '#f0b865' }}>{row.index}</span>
-                      <span className="text-stone-400 ml-1">{row.status}</span>
-                    </span>
-                  </td>
-                  <td className="py-3 text-stone-600 leading-relaxed">{row.action}</td>
-                </tr>
+              ] as Array<{
+                week: string; index: number; badge: string; status: string;
+                rows: { icon: string; type: string; action: string }[]
+              }>).map((row) => (
+                row.rows.map((r, ri) => (
+                  <tr
+                    key={`${row.week}-${ri}`}
+                    className={`border-stone-100 hover:bg-stone-50 transition-colors ${ri === row.rows.length - 1 ? 'border-b' : ''}`}
+                  >
+                    {ri === 0 && (
+                      <>
+                        <td className="py-2 pr-3 text-stone-600 font-medium whitespace-nowrap align-top pt-3" rowSpan={3}>{row.week}</td>
+                        <td className="py-2 pr-3 whitespace-nowrap align-top pt-3" rowSpan={3}>
+                          <span className="flex items-center gap-1">
+                            <span>{row.badge}</span>
+                            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600, color: row.index >= 85 ? '#f05350' : '#f0b865' }}>{row.index}</span>
+                          </span>
+                          <span className="text-stone-400 block mt-0.5">{row.status}</span>
+                        </td>
+                      </>
+                    )}
+                    <td className="py-1.5 pr-3 whitespace-nowrap text-stone-500">
+                      <span className="mr-1">{r.icon}</span>{r.type}
+                    </td>
+                    <td className="py-1.5 text-stone-600 leading-relaxed">{r.action}</td>
+                  </tr>
+                ))
               ))}
             </tbody>
           </table>
