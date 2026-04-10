@@ -22,8 +22,8 @@ const MONTHLY_PLANS = [
     tagJa: '小さく始めたい方に',
     tagEn: 'To get started',
     features: {
-      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'クーポン発行', 'フリーペーパー小枠'],
-      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'Coupon', 'Free paper small slot'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'フリーペーパー小枠'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'Free paper small slot'],
     },
     featured: false,
   },
@@ -35,8 +35,8 @@ const MONTHLY_PLANS = [
     tagJa: '集客に本気の方に',
     tagEn: 'For serious promotion',
     features: {
-      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'クーポン発行', 'SNS紹介（月2回）', 'フリーペーパー中枠'],
-      en: ['Web listing (4 languages)', 'Spot detail page', 'Coupon', 'SNS feature (×2/mo)', 'Free paper mid slot'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'SNS紹介（月2回）', 'フリーペーパー中枠'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'SNS feature (×2/mo)', 'Free paper mid slot'],
     },
     featured: true,
   },
