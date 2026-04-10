@@ -23,8 +23,10 @@ async function fetchTrendsScore(): Promise<number | null> {
 }
 
 // --- 楽天トラベルAPI (ホテル空室率プロキシ) ---
+let rakutenDebug: Record<string, unknown> = {}
 async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
   const appId = process.env.RAKUTEN_APP_ID
+  rakutenDebug = { appIdSet: !!appId, appIdPrefix: appId ? appId.slice(0, 4) + '...' : null }
   if (!appId) return null
   try {
     const url = new URL('https://app.rakuten.co.jp/services/api/Travel/VacantHotelSearch/20170426')
@@ -38,16 +40,22 @@ async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
     url.searchParams.set('format', 'json')
 
     const res = await fetch(url.toString())
-    if (!res.ok) return null
+    rakutenDebug = { ...rakutenDebug, httpStatus: res.status }
+    if (!res.ok) {
+      const errText = await res.text()
+      rakutenDebug = { ...rakutenDebug, error: errText.slice(0, 200) }
+      return null
+    }
     const json = await res.json()
+    rakutenDebug = { ...rakutenDebug, rawKeys: Object.keys(json) }
 
     const hotels = json?.hotels ?? []
     const count = hotels.length
-    // 空きが少ないほど(count < 10)満室率が高い
-    // 満室率 = 100 - (count / 30 * 100)を目安に算出
+    rakutenDebug = { ...rakutenDebug, hotelCount: count }
     const vacancyRate = Math.min(100, Math.round((count / 30) * 100))
-    return vacancyRate  // これが空室率
+    return vacancyRate
   } catch (e) {
+    rakutenDebug = { ...rakutenDebug, exception: String(e) }
     console.error('Rakuten Travel API failed:', e)
     return null
   }
@@ -221,6 +229,7 @@ export async function GET(request: Request) {
       hotel:  hotelVacancy !== null ? 'ok' : 'fallback (RAKUTEN_APP_ID needed)',
       flight: flightPrice  !== null ? 'ok' : 'fallback (AMADEUS_CLIENT_ID/SECRET needed)',
     },
+    debug: { rakuten: rakutenDebug },
     timestamp: today.toISOString(),
   })
 }
