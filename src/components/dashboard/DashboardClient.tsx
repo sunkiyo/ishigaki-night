@@ -95,7 +95,6 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const flightScore = latest?.flight
     ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200))
     : 0
-  const flightPt    = Math.round(flightScore * 0.2)
   const flightLevel = !latest?.flight ? '-'
     : latest.flight < 15000 ? (lang === 'ja' ? '安め' : 'Low')
     : latest.flight < 20000 ? (lang === 'ja' ? '普通' : 'Normal')
@@ -277,25 +276,52 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
             {lang === 'ja' ? '今週やること' : 'This Week'}
           </p>
           {(status === 'hot' ? [
-            ['🎵', lang === 'ja' ? 'DJイベント・ライブ開催推奨' : 'Host DJ events & live music'],
-            ['👥', lang === 'ja' ? 'スタッフ増員・仕入れ増量' : 'Increase staff & stock'],
-            ['📱', lang === 'ja' ? 'SNS告知を最大化' : 'Maximize SNS promotions'],
+            ['🎵',
+              lang === 'ja' ? 'DJイベント・ライブを週1回以上開催する' : 'Host DJ/live events weekly',
+              lang === 'ja' ? '→ 滞在時間が延びて客単価1.5〜2倍に' : '→ Longer stays, 1.5–2× spend per head'],
+            ['👥',
+              lang === 'ja' ? 'スタッフを2名増員・仕入れを1.5倍にする' : 'Add 2 staff & increase stock 1.5×',
+              lang === 'ja' ? '→ 機会損失ゼロ・売上を最大化できる' : '→ Zero missed sales, max revenue'],
+            ['📱',
+              lang === 'ja' ? '「今週末空きあり」をSNSで毎朝投稿する' : 'Post "seats available" on SNS each morning',
+              lang === 'ja' ? '→ 新規来店が週10〜20組増える' : '→ 10–20 extra walk-ins per week'],
           ] : status === 'warm' ? [
-            ['📣', lang === 'ja' ? 'SNS積極発信・特別メニュー' : 'Active SNS + specials'],
-            ['🌐', lang === 'ja' ? 'インバウンド向けコンテンツ' : 'Multilingual content push'],
-            ['🎟', lang === 'ja' ? 'イベントを事前告知' : 'Pre-promote events'],
+            ['⏰',
+              lang === 'ja' ? 'ハッピーアワーを19〜21時に設定する' : 'Set happy hour 7–9 PM',
+              lang === 'ja' ? '→ アイドルタイムの売上が30%以上向上' : '→ 30%+ revenue lift in slow hours'],
+            ['🌐',
+              lang === 'ja' ? 'インスタを英語・中国語でも週2回投稿する' : 'Post on Instagram in EN/ZH twice a week',
+              lang === 'ja' ? '→ インバウンド客の認知を獲得できる' : '→ Reach international tourist audience'],
+            ['🎟',
+              lang === 'ja' ? '週末イベントを3日前にSNS告知する' : 'Announce weekend events 3 days ahead',
+              lang === 'ja' ? '→ 予約数が告知なし比で約2倍に増える' : '→ ~2× reservations vs. no advance notice'],
           ] : status === 'normal' ? [
-            ['🎫', lang === 'ja' ? 'クーポン・割引で集客強化' : 'Launch coupons & discounts'],
-            ['📍', lang === 'ja' ? '地元客向けイベント' : 'Target local residents'],
-            ['💰', lang === 'ja' ? 'SNS広告を出すタイミング' : 'Good timing for paid ads'],
+            ['🎫',
+              lang === 'ja' ? 'LINE登録で500円クーポンを配布する' : 'Offer ¥500 coupon for LINE sign-ups',
+              lang === 'ja' ? '→ リピーター獲得・再来店率が上がる' : '→ Build loyalty & drive repeat visits'],
+            ['📍',
+              lang === 'ja' ? '常連向けに限定メニューを1品追加する' : 'Add one exclusive menu item for regulars',
+              lang === 'ja' ? '→ 口コミと地元客のリピートが増える' : '→ Word-of-mouth & local repeat boost'],
+            ['💰',
+              lang === 'ja' ? 'SNS広告を週¥3,000〜試してみる' : 'Try SNS ads from ¥3,000/week',
+              lang === 'ja' ? '→ 閑散期は入札単価が安く費用対効果が高い' : '→ Lower CPC in slow season = better ROI'],
           ] : [
-            ['🕐', lang === 'ja' ? '短縮営業・休業を検討' : 'Consider reduced hours'],
-            ['📸', lang === 'ja' ? 'コンテンツ制作に活用' : 'Create content for later'],
-            ['📊', lang === 'ja' ? '次の繁忙期の準備' : 'Prep for next peak'],
-          ]).map(([icon, text]) => (
-            <div key={text as string} className="flex items-start gap-3 py-2 border-b border-stone-100 last:border-0">
-              <span className="text-sm mt-0.5" style={{ fontSize: 14 }}>{icon}</span>
-              <span className="text-xs text-stone-600 leading-relaxed">{text}</span>
+            ['🕐',
+              lang === 'ja' ? '営業時間を2時間短縮する' : 'Reduce hours by 2 hours',
+              lang === 'ja' ? '→ 人件費を月5〜8万円削減できる' : '→ Save ¥50–80k/month in labor costs'],
+            ['📸',
+              lang === 'ja' ? '店内・料理の写真・動画を撮り溜める' : 'Shoot photos & videos of food/interior',
+              lang === 'ja' ? '→ 繁忙期SNS投稿の素材を先行確保できる' : '→ Pre-build content for peak-season posts'],
+            ['📊',
+              lang === 'ja' ? 'GW・夏の仕込み計画を今から立てる' : 'Plan stock & staffing for GW & summer now',
+              lang === 'ja' ? '→ 繁忙期の機会損失を防ぐ事前準備になる' : '→ Prevent stockouts & understaffing at peak'],
+          ]).map(([icon, action, result]) => (
+            <div key={action as string} className="flex items-start gap-3 py-2.5 border-b border-stone-100 last:border-0">
+              <span className="mt-0.5 shrink-0" style={{ fontSize: 14 }}>{icon}</span>
+              <div>
+                <p className="text-xs text-stone-700 font-medium leading-relaxed">{action as string}</p>
+                <p className="text-xs text-stone-400 leading-relaxed mt-0.5">{result as string}</p>
+              </div>
             </div>
           ))}
         </div>

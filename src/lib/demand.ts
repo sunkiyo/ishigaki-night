@@ -50,7 +50,10 @@ const historyData: DemandEntry[] = [
   { date: '2026-04-20', trends: 92, flight: 31000, hotel: 8,  note: 'GWピーク（予測）', isForecast: true, index: 0 },
   { date: '2026-04-27', trends: 89, flight: 29000, hotel: 12, note: 'GW後半（予測）', isForecast: true, index: 0 },
   { date: '2026-05-04', trends: 85, flight: 26000, hotel: 18, note: 'GW最終週（予測）', isForecast: true, index: 0 },
-  { date: '2026-05-11', trends: 62, flight: 18000, hotel: 38, note: 'GW明け（予測）', isForecast: true, index: 0 },
+  { date: '2026-05-11', trends: 62, flight: 18000, hotel: 38, note: 'GW明け（予測）',    isForecast: true, index: 0 },
+  { date: '2026-05-18', trends: 52, flight: 16200, hotel: 48, note: '5月中旬（予測）',   isForecast: true, index: 0 },
+  { date: '2026-05-25', trends: 44, flight: 14800, hotel: 58, note: '5月末（予測）',     isForecast: true, index: 0 },
+  { date: '2026-06-01', trends: 36, flight: 13500, hotel: 65, note: '梅雨入り前（予測）', isForecast: true, index: 0 },
 ].map((d) => ({
   ...d,
   index: calcIndex(d.trends ?? 0, d.flight ?? 15000, d.hotel ?? 50),
