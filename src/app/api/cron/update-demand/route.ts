@@ -53,8 +53,10 @@ async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
     const hotels = json?.hotels ?? []
     const count = hotels.length
     rakutenDebug = { ...rakutenDebug, hotelCount: count }
+    // 空きホテルが少ない → 満室に近い → 空室率が低い
+    // count=0なら空室率0%（満室）, count=30なら空室率100%（ガラガラ）
     const vacancyRate = Math.min(100, Math.round((count / 30) * 100))
-    return vacancyRate
+    return vacancyRate  // calcIndex内で (100 - hotel) = 満室率として使われる
   } catch (e) {
     rakutenDebug = { ...rakutenDebug, exception: String(e) }
     console.error('Rakuten Travel API failed:', e)
