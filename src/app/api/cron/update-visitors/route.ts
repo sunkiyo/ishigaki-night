@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { inflateSync } from 'zlib'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 // PDFのURLを生成
 // ファイル名パターン: nyuikisuikei[西暦下2桁][月2桁].pdf
@@ -180,7 +180,7 @@ export async function GET(request: Request) {
     const year = targetDate.getFullYear()
     const month = targetDate.getMonth() + 1
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await getSupabaseAdmin()
       .from('visitor_monthly')
       .select('id, visitors')
       .eq('year', year)
@@ -214,7 +214,7 @@ export async function GET(request: Request) {
       console.log(`[${year}/${month}] allNums(top10):`, allNums.slice(0, 10))
       console.log(`[${year}/${month}] parsed:`, parsedValues)
 
-      const { error } = await supabaseAdmin
+      const { error } = await getSupabaseAdmin()
         .from('visitor_monthly')
         .upsert(
           {
