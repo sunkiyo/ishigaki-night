@@ -1,6 +1,6 @@
 import { setRequestLocale } from 'next-intl/server'
 
-const PLANS = [
+const MONTHLY_PLANS = [
   {
     id: 'starter',
     nameJa: 'スターター',
@@ -35,8 +35,8 @@ const PLANS = [
     tagJa: '集客に本気の方に',
     tagEn: 'For serious promotion',
     features: {
-      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'クーポン発行', 'SNS紹介（月2回）', 'フリーペーパー掲載'],
-      en: ['Web listing (4 languages)', 'Spot detail page', 'Coupon', 'SNS feature (×2/mo)', 'Free paper listing'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'クーポン発行', 'SNS紹介（月2回）', 'フリーペーパー中枠'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Coupon', 'SNS feature (×2/mo)', 'Free paper mid slot'],
     },
     featured: true,
   },
@@ -51,6 +51,69 @@ const PLANS = [
       ja: ['スタンダード全機能', 'フリーペーパー優先枠', 'SNS紹介（週1回）', '写真撮影サポート', '月次レポート'],
       en: ['All Standard features', 'Free paper priority slot', 'SNS feature (weekly)', 'Photo shoot support', 'Monthly report'],
     },
+    featured: false,
+  },
+]
+
+const PAPER_PLANS = [
+  {
+    id: 'spread',
+    nameJa: '見開き特集',
+    nameEn: 'Feature Spread',
+    price: 38000,
+    tagJa: 'ジャンル先頭・A4サイズ相当',
+    tagEn: 'Genre top position — A4 size',
+    note: { ja: '3枠限定（レストラン・バー・キャバ 各1枠）', en: '3 slots only (Restaurant / Bar / Cabaret)' },
+    featured: true,
+  },
+  {
+    id: 'tokudai',
+    nameJa: '特大（1ページ）',
+    nameEn: 'Full Page',
+    price: 30000,
+    tagJa: '目立ち度◎',
+    tagEn: 'Maximum impact',
+    note: { ja: '2枠限定', en: '2 slots only' },
+    featured: false,
+  },
+  {
+    id: 'large',
+    nameJa: '大枠（1/2ページ）',
+    nameEn: 'Half Page',
+    price: 18000,
+    tagJa: '',
+    tagEn: '',
+    note: { ja: '4枠', en: '4 slots' },
+    featured: false,
+  },
+  {
+    id: 'medium',
+    nameJa: '中枠（1/4ページ）',
+    nameEn: 'Quarter Page',
+    price: 10000,
+    tagJa: '',
+    tagEn: '',
+    note: { ja: '8枠', en: '8 slots' },
+    featured: false,
+  },
+  {
+    id: 'small',
+    nameJa: '小枠（1/8ページ）',
+    nameEn: 'Small',
+    price: 5000,
+    tagJa: '',
+    tagEn: '',
+    note: { ja: '8枠', en: '8 slots' },
+    featured: false,
+  },
+  {
+    id: 'backcover',
+    nameJa: '裏表紙',
+    nameEn: 'Back Cover',
+    price: 35000,
+    tagJa: '最高視認率・1枠のみ',
+    tagEn: 'Highest visibility — 1 slot only',
+    note: { ja: '1枠限定', en: '1 slot only' },
     featured: false,
   },
 ]
@@ -92,7 +155,7 @@ export default async function AdvertisePage({
       <div className="grid grid-cols-3 gap-4 mb-20">
         {[
           { num: '150万人', label: isJa ? '年間観光客数（2025年実績）' : isZh ? '年遊客數（2025年實績）' : 'Annual visitors (2025)' },
-          { num: '4言語', label: isJa ? '日英中韓で発信' : isZh ? '日英中韓發信' : 'JP / EN / ZH / KO' },
+          { num: '4言語',  label: isJa ? '日英中韓で発信' : isZh ? '日英中韓發信' : 'JP / EN / ZH / KO' },
           { num: '¥0',    label: isJa ? '初期費用なし' : isZh ? '無初始費用' : 'No setup fee' },
         ].map((s) => (
           <div key={s.num} className="border border-stone-200 rounded-xl p-6 text-center bg-surface">
@@ -102,43 +165,92 @@ export default async function AdvertisePage({
         ))}
       </div>
 
-      {/* PLANS */}
-      <h2 className="font-mincho text-2xl font-semibold mb-8 text-center">
-        {isJa ? '掲載プラン' : isZh ? '刊登方案' : 'Plans'}
-      </h2>
-      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5 mb-20">
-        {PLANS.map((plan) => (
-          <div
-            key={plan.id}
-            className={`relative rounded-xl p-6 border ${
-              plan.featured
-                ? 'border-gold bg-gold/8'
-                : 'border-stone-200 bg-surface'
-            }`}
-          >
-            {plan.featured && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-white text-xs font-semibold px-3 py-0.5 rounded-full whitespace-nowrap">
-                {isJa ? '人気' : isZh ? '熱門' : 'Popular'}
-              </div>
-            )}
-            <p className="font-mincho text-lg font-semibold mb-1">
-              {isJa ? plan.nameJa : plan.nameEn}
-            </p>
-            <p className="text-3xl font-semibold text-gold font-mincho mb-1">
-              ¥{plan.price.toLocaleString()}
-              <span className="text-sm text-stone-400 font-sans font-normal"> / {isJa ? '月' : isZh ? '月' : 'mo'}</span>
-            </p>
-            <p className="text-xs text-stone-500 mb-5">{isJa ? plan.tagJa : plan.tagEn}</p>
-            <ul className="space-y-2 text-sm text-stone-600">
-              {(isJa ? plan.features.ja : plan.features.en).map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <span className="text-gold mt-0.5">—</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      {/* MONTHLY PLANS */}
+      <div className="mb-20">
+        <div className="text-center mb-8">
+          <p className="text-xs tracking-widest uppercase text-gold mb-2">
+            {isJa ? 'Web掲載' : 'Web Listing'}
+          </p>
+          <h2 className="font-mincho text-2xl font-semibold">
+            {isJa ? '月額プラン' : isZh ? '月費方案' : 'Monthly Plans'}
+          </h2>
+        </div>
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-5">
+          {MONTHLY_PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative rounded-xl p-6 border ${
+                plan.featured ? 'border-gold bg-gold/8' : 'border-stone-200 bg-surface'
+              }`}
+            >
+              {plan.featured && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-white text-xs font-semibold px-3 py-0.5 rounded-full whitespace-nowrap">
+                  {isJa ? '人気' : isZh ? '熱門' : 'Popular'}
+                </div>
+              )}
+              <p className="font-mincho text-lg font-semibold mb-1">
+                {isJa ? plan.nameJa : plan.nameEn}
+              </p>
+              <p className="text-3xl font-semibold text-gold font-mincho mb-1">
+                ¥{plan.price.toLocaleString()}
+                <span className="text-sm text-stone-400 font-sans font-normal"> / {isJa ? '月' : 'mo'}</span>
+              </p>
+              <p className="text-xs text-stone-500 mb-5">{isJa ? plan.tagJa : plan.tagEn}</p>
+              <ul className="space-y-2 text-sm text-stone-600">
+                {(isJa ? plan.features.ja : plan.features.en).map((f) => (
+                  <li key={f} className="flex items-start gap-2">
+                    <span className="text-gold mt-0.5">—</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FREEPAPER PLANS */}
+      <div className="mb-20">
+        <div className="text-center mb-8">
+          <p className="text-xs tracking-widest uppercase text-gold mb-2">
+            {isJa ? 'フリーペーパー' : 'Free Paper'}
+          </p>
+          <h2 className="font-mincho text-2xl font-semibold">
+            {isJa ? '単発プラン' : isZh ? '單次方案' : 'One-time Plans'}
+          </h2>
+          <p className="text-xs text-stone-400 mt-2">
+            {isJa ? 'A5・32ページ　ジャンル別（レストラン／バー／キャバ）構成' : 'A5 · 32pp · Organized by genre (Restaurant / Bar / Cabaret)'}
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+          {PAPER_PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className={`relative rounded-xl p-5 border ${
+                plan.featured ? 'border-gold bg-gold/8' : 'border-stone-200 bg-surface'
+              }`}
+            >
+              {plan.featured && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gold text-white text-xs font-semibold px-3 py-0.5 rounded-full whitespace-nowrap">
+                  {isJa ? 'おすすめ' : 'Recommended'}
+                </div>
+              )}
+              <p className="font-mincho text-base font-semibold mb-1">
+                {isJa ? plan.nameJa : plan.nameEn}
+              </p>
+              <p className="text-2xl font-semibold text-gold font-mincho mb-1">
+                ¥{plan.price.toLocaleString()}
+                <span className="text-xs text-stone-400 font-sans font-normal"> / {isJa ? '回' : 'issue'}</span>
+              </p>
+              {plan.tagJa && (
+                <p className="text-xs text-stone-500 mb-2">{isJa ? plan.tagJa : plan.tagEn}</p>
+              )}
+              <p className="text-xs text-stone-400 mt-2 border-t border-stone-100 pt-2">
+                {isJa ? plan.note.ja : plan.note.en}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* CTA */}
