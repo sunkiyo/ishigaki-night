@@ -81,7 +81,12 @@ JSON配列のみ返してください（説明文不要）:
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const supabase = getSupabaseAdmin()
   const debug: Record<string, unknown> = { has_api_key: !!process.env.ANTHROPIC_API_KEY, mode: 'claude-knowledge' }
 
