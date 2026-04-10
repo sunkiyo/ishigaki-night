@@ -87,6 +87,21 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const forecastEntries = history.filter((r) => r.isForecast)
   const displayHistory  = [...actualEntries.slice(-8), ...forecastEntries]
 
+  // 需要レベルカード: 3本バー用の計算
+  const trendsScore = latest?.trends ?? 0
+  const trendsPt    = Math.round(trendsScore * 0.5)
+  const occupancy   = latest?.hotel != null ? 100 - latest.hotel : 0
+  const hotelPt     = Math.round(occupancy * 0.3)
+  const flightScore = latest?.flight
+    ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200))
+    : 0
+  const flightPt    = Math.round(flightScore * 0.2)
+  const flightLevel = !latest?.flight ? '-'
+    : latest.flight < 15000 ? (lang === 'ja' ? '安め' : 'Low')
+    : latest.flight < 20000 ? (lang === 'ja' ? '普通' : 'Normal')
+    : latest.flight < 25000 ? (lang === 'ja' ? '高め' : 'High')
+    : (lang === 'ja' ? '激高' : 'Very High')
+
   if (!mounted) return <div className="h-96 flex items-center justify-center text-stone-400 text-sm">Loading...</div>
 
   return (
@@ -187,22 +202,72 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
           </div>
           {/* 3本バー */}
           <div className="flex flex-col gap-3 mt-4">
-            {[
-              { icon: '🔍', label: lang === 'ja' ? 'グーグル検索' : 'Google Trends', val: latest?.trends ?? 0, max: 50, pt: Math.round((latest?.trends ?? 0) * 0.5), color: '#4ea8f5' },
-              { icon: '🏨', label: lang === 'ja' ? 'ホテル埋まり' : 'Hotel Vacancy',  val: latest?.hotel != null ? 100 - latest.hotel : 0, max: 30, pt: Math.round((latest?.hotel != null ? 100 - latest.hotel : 0) * 0.3), color: '#d4923f' },
-              { icon: '✈️', label: lang === 'ja' ? '飛行機の値段' : 'Flight Price',   val: latest?.flight ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200)) : 0, max: 20, pt: Math.round((latest?.flight ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200)) : 0) * 0.2), color: '#3ec768' },
-            ].map((b) => (
-              <div key={b.label}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span style={{ fontSize: 13 }}>{b.icon}</span>
-                  <span className="text-xs text-stone-500 flex-1">{b.label}</span>
-                  <span className="text-xs font-semibold text-stone-600">{b.pt}<span className="text-stone-400 font-normal"> / {b.max}pt</span></span>
-                </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(26,18,8,.08)' }}>
-                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(b.val / 100) * 100}%`, background: b.color }} />
-                </div>
+
+            {/* グーグル検索: Trendsスコア(0-100)×0.5=pt */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span style={{ fontSize: 13 }}>🔍</span>
+                <span className="text-xs text-stone-500 flex-1">{lang === 'ja' ? 'グーグル検索' : 'Google Trends'}</span>
+                <span className="text-xs font-semibold text-stone-600">
+                  {trendsPt}<span className="text-stone-400 font-normal"> / 50pt</span>
+                </span>
               </div>
-            ))}
+              <div className="relative h-3 rounded-full" style={{ background: 'rgba(26,18,8,.08)' }}>
+                <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
+                  style={{ width: `${trendsScore}%`, background: '#4ea8f5', minWidth: 4 }} />
+                <span className="absolute top-1/2 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap"
+                  style={{ left: `calc(${trendsScore}% + 3px)`, color: '#4ea8f5' }}>
+                  {trendsScore}
+                </span>
+              </div>
+              <p className="text-[9px] text-stone-300 mt-0.5">{lang === 'ja' ? '相対人気度スコア（最高値=100）×0.5' : 'Relative search score (peak=100) ×0.5'}</p>
+            </div>
+
+            {/* ホテル満室率: 空室率の逆数 */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span style={{ fontSize: 13 }}>🏨</span>
+                <span className="text-xs text-stone-500 flex-1">{lang === 'ja' ? 'ホテル満室率' : 'Hotel Occupancy'}</span>
+                <span className="text-xs font-semibold text-stone-600">
+                  {occupancy}<span className="text-stone-400 font-normal">%</span>
+                  <span className="text-stone-300 font-normal ml-1">({hotelPt}/{lang === 'ja' ? '30pt' : '30pt'})</span>
+                </span>
+              </div>
+              <div className="relative h-3 rounded-full" style={{ background: 'rgba(26,18,8,.08)' }}>
+                <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
+                  style={{ width: `${occupancy}%`, background: '#d4923f', minWidth: 4 }} />
+                <span className="absolute top-1/2 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap"
+                  style={{ left: `calc(${occupancy}% + 3px)`, color: '#d4923f' }}>
+                  {occupancy}%
+                </span>
+              </div>
+            </div>
+
+            {/* 航空運賃: 実額＋レベル表示 */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span style={{ fontSize: 13 }}>✈️</span>
+                <span className="text-xs text-stone-500 flex-1">{lang === 'ja' ? '航空運賃' : 'Flight Price'}</span>
+                <span className="text-xs font-semibold text-stone-600">
+                  {latest?.flight ? `¥${latest.flight.toLocaleString()}` : '-'}
+                  <span className="text-stone-400 font-normal ml-1">({flightLevel})</span>
+                </span>
+              </div>
+              <div className="relative h-3 rounded-full" style={{ background: 'rgba(26,18,8,.08)' }}>
+                <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
+                  style={{ width: `${flightScore}%`, background: '#3ec768', minWidth: 4 }} />
+                <span className="absolute top-1/2 -translate-y-1/2 text-[9px] font-bold whitespace-nowrap"
+                  style={{ left: `calc(${flightScore}% + 3px)`, color: '#3ec768' }}>
+                  {flightLevel}
+                </span>
+              </div>
+              <p className="text-[9px] text-stone-300 mt-0.5">
+                {lang === 'ja'
+                  ? '安め<¥15k / 普通¥15〜20k / 高め¥20〜25k / 激高≥¥25k'
+                  : 'Low<¥15k / Normal¥15-20k / High¥20-25k / Very High≥¥25k'}
+              </p>
+            </div>
+
           </div>
         </div>
 
