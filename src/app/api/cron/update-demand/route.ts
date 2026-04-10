@@ -22,12 +22,12 @@ async function fetchTrendsScore(): Promise<number | null> {
   }
 }
 
-// --- 楽天トラベルAPI (ホテル空室率プロキシ) ---
+// --- 楽天トラベルAPI (空室率 + 平均最安値) ---
 let rakutenDebug: Record<string, unknown> = {}
-async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
+async function fetchHotelData(checkInDate: string): Promise<{ vacancy: number | null; avgPrice: number | null }> {
   const appId = process.env.RAKUTEN_APP_ID
   rakutenDebug = { appIdSet: !!appId, appIdPrefix: appId ? appId.slice(0, 4) + '...' : null }
-  if (!appId) return null
+  if (!appId) return { vacancy: null, avgPrice: null }
   try {
     const url = new URL('https://app.rakuten.co.jp/services/api/Travel/VacantHotelSearch/20170426')
     url.searchParams.set('applicationId', appId)
@@ -45,62 +45,69 @@ async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
     if (!res.ok) {
       const errText = await res.text()
       rakutenDebug = { ...rakutenDebug, error: errText.slice(0, 200) }
-      return null
+      return { vacancy: null, avgPrice: null }
     }
     const json = await res.json()
     rakutenDebug = { ...rakutenDebug, rawKeys: Object.keys(json) }
 
-    const hotels = json?.hotels ?? []
+    const hotels: unknown[] = json?.hotels ?? []
     const count = hotels.length
-    rakutenDebug = { ...rakutenDebug, hotelCount: count }
-    // 空きホテルが少ない → 満室に近い → 空室率が低い
-    // count=0なら空室率0%（満室）, count=30なら空室率100%（ガラガラ）
+    // 空室率: count=0→満室(0%), count=30→空き多(100%)
     const vacancyRate = Math.min(100, Math.round((count / 30) * 100))
-    return vacancyRate  // calcIndex内で (100 - hotel) = 満室率として使われる
+
+    // 各ホテルの最安値を抽出して平均を計算
+    const prices = hotels
+      .map((h) => {
+        const arr = h as Array<{ hotelBasicInfo?: { hotelMinCharge?: number } }>
+        return arr[0]?.hotelBasicInfo?.hotelMinCharge
+      })
+      .filter((p): p is number => typeof p === 'number' && p > 0)
+    const avgPrice = prices.length > 0
+      ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)
+      : null
+
+    rakutenDebug = { ...rakutenDebug, hotelCount: count, avgPrice, priceCount: prices.length }
+    return { vacancy: vacancyRate, avgPrice }
   } catch (e) {
     rakutenDebug = { ...rakutenDebug, exception: String(e) }
     console.error('Rakuten Travel API failed:', e)
-    return null
+    return { vacancy: null, avgPrice: null }
   }
 }
 
-// --- Amadeus API (航空運賃) ---
-async function fetchFlightPrice(departureDate: string): Promise<number | null> {
-  const clientId     = process.env.AMADEUS_CLIENT_ID
-  const clientSecret = process.env.AMADEUS_CLIENT_SECRET
-  if (!clientId || !clientSecret) return null
+// --- OpenSky Network (石垣空港ROIG 週次フライト数 → 0-100スコア) ---
+let openskyDebug: Record<string, unknown> = {}
+async function fetchFlightScore(weekStart: string): Promise<number | null> {
   try {
-    // アクセストークン取得
-    const tokenRes = await fetch('https://test.api.amadeus.com/v1/security/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
-    })
-    if (!tokenRes.ok) return null
-    const { access_token } = await tokenRes.json()
+    // 先週1週間のROIG(石垣空港)到着フライト数を取得
+    const endTs   = Math.floor(new Date(weekStart).getTime() / 1000)
+    const beginTs = endTs - 7 * 24 * 3600
+    const url = `https://opensky-network.org/api/flights/arrival?airport=ROIG&begin=${beginTs}&end=${endTs}`
 
-    // フライト価格取得 HND→ISG
-    const flightUrl = new URL('https://test.api.amadeus.com/v2/shopping/flight-offers')
-    flightUrl.searchParams.set('originLocationCode', 'HND')
-    flightUrl.searchParams.set('destinationLocationCode', 'ISG')
-    flightUrl.searchParams.set('departureDate', departureDate)
-    flightUrl.searchParams.set('adults', '1')
-    flightUrl.searchParams.set('max', '5')
-    flightUrl.searchParams.set('currencyCode', 'JPY')
+    const headers: Record<string, string> = {}
+    if (process.env.OPENSKY_USERNAME && process.env.OPENSKY_PASSWORD) {
+      const cred = Buffer.from(`${process.env.OPENSKY_USERNAME}:${process.env.OPENSKY_PASSWORD}`).toString('base64')
+      headers['Authorization'] = `Basic ${cred}`
+    }
 
-    const flightRes = await fetch(flightUrl.toString(), {
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
-    if (!flightRes.ok) return null
-    const flightJson = await flightRes.json()
+    const res = await fetch(url, { headers })
+    openskyDebug = { httpStatus: res.status, authed: !!headers['Authorization'] }
+    if (!res.ok) {
+      const errText = await res.text()
+      openskyDebug = { ...openskyDebug, error: errText.slice(0, 200) }
+      return null
+    }
+    const flights = await res.json()
+    if (!Array.isArray(flights)) return null
 
-    const offers = flightJson?.data ?? []
-    if (offers.length === 0) return null
-    // 最安値を取得
-    const prices = offers.map((o: { price: { grandTotal: string } }) => parseFloat(o.price.grandTotal))
-    return Math.round(Math.min(...prices))
+    const count = flights.length
+    // ISG: 閑散期~30便/週, 繁忙期~70便/週 を基準に正規化
+    const score = Math.min(100, Math.round((count / 70) * 100))
+    openskyDebug = { ...openskyDebug, flightCount: count, score, period: `${beginTs}-${endTs}` }
+    return score
   } catch (e) {
-    console.error('Amadeus API failed:', e)
+    openskyDebug = { exception: String(e) }
+    console.error('OpenSky fetch failed:', e)
     return null
   }
 }
@@ -177,21 +184,27 @@ export async function GET(request: Request) {
   const today     = new Date()
   const weekStart = getMondayOf(today)
   const checkIn   = addDays(weekStart, 14)  // 2週間後を予約サーチ対象に
-  const flightDay = addDays(weekStart, 7)   // 来週の運賃を参照
 
-  // --- 実績データ取得 ---
-  const [trendsScore, hotelVacancy, flightPrice] = await Promise.all([
+  // --- 実績データ取得 (並列) ---
+  const [trendsScore, hotelData, flightScore] = await Promise.all([
     fetchTrendsScore(),
-    fetchHotelVacancy(checkIn),
-    fetchFlightPrice(flightDay),
+    fetchHotelData(checkIn),
+    fetchFlightScore(weekStart),
   ])
 
-  const trends = trendsScore ?? 60
-  const hotel  = hotelVacancy ?? 40
-  const flight = flightPrice  ?? 18000
-  const index  = calcIndex(trends, flight, hotel)
+  const trends    = trendsScore        ?? 60
+  const hotel     = hotelData.vacancy  ?? 40
+  const flight    = flightScore        ?? 35   // OpenSkyスコア(0-100)
+  const avgPrice  = hotelData.avgPrice          // 楽天平均最安値（参考）
+  const index     = calcIndex(trends, flight, hotel)
 
   results.push({ week_start: weekStart, trends, hotel, flight, index, source: 'api' })
+
+  const noteJson = JSON.stringify({
+    src: 'api',
+    hotel_avg_price: avgPrice,   // 楽天トラベル平均最安値(円)
+    flight_source: 'opensky',    // OpenSky Network
+  })
 
   const { error: upsertErr } = await supabase.from('demand_weekly').upsert({
     week_start: weekStart,
@@ -201,7 +214,7 @@ export async function GET(request: Request) {
     index,
     is_forecast: false,
     confidence: 1.0,
-    note: '自動取得',
+    note: noteJson,
     source: 'api',
     updated_at: new Date().toISOString(),
   }, { onConflict: 'week_start' })
@@ -224,15 +237,15 @@ export async function GET(request: Request) {
   return NextResponse.json({
     success: true,
     weekStart,
-    actual: { trends, hotel, flight, index },
+    actual: { trends, hotel, flight, index, hotel_avg_price: avgPrice },
     forecasts: forecasts.length,
     results,
     apis: {
-      trends: trendsScore !== null ? 'ok' : 'fallback',
-      hotel:  hotelVacancy !== null ? 'ok' : 'fallback (RAKUTEN_APP_ID needed)',
-      flight: flightPrice  !== null ? 'ok' : 'fallback (AMADEUS_CLIENT_ID/SECRET needed)',
+      trends:  trendsScore        !== null ? 'ok' : 'fallback',
+      hotel:   hotelData.vacancy  !== null ? 'ok' : 'fallback (RAKUTEN_APP_ID needed)',
+      flight:  flightScore        !== null ? 'ok' : 'fallback (OPENSKY_USERNAME/PASSWORD optional)',
     },
-    debug: { rakuten: rakutenDebug },
+    debug: { rakuten: rakutenDebug, opensky: openskyDebug },
     timestamp: today.toISOString(),
   })
 }

@@ -101,14 +101,14 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const trendsPt    = Math.round(trendsScore * 0.5)
   const occupancy   = latest?.hotel != null ? 100 - latest.hotel : 0
   const hotelPt     = Math.round(occupancy * 0.3)
-  const flightScore = latest?.flight
-    ? Math.min(100, Math.max(0, (latest.flight - 10000) / 200))
-    : 0
+  // flight = OpenSkyフライトスコア(0-100, 旧:円)
+  const flightScore = latest?.flight ?? 0
+  const estimatedFlights = latest?.flight ? Math.round(latest.flight * 0.7) : null  // スコア→推定週次便数
   const flightLevel = !latest?.flight ? '-'
-    : latest.flight < 15000 ? (lang === 'ja' ? '安め' : 'Low')
-    : latest.flight < 20000 ? (lang === 'ja' ? '普通' : 'Normal')
-    : latest.flight < 25000 ? (lang === 'ja' ? '高め' : 'High')
-    : (lang === 'ja' ? '激高' : 'Very High')
+    : latest.flight < 30 ? (lang === 'ja' ? '少なめ' : 'Low')
+    : latest.flight < 55 ? (lang === 'ja' ? '普通' : 'Normal')
+    : latest.flight < 80 ? (lang === 'ja' ? '多め' : 'High')
+    : (lang === 'ja' ? '激混み' : 'Very High')
 
   if (!mounted) return <div className="h-96 flex items-center justify-center text-stone-400 text-sm">Loading...</div>
 
@@ -251,13 +251,13 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
               </div>
             </div>
 
-            {/* 航空運賃: 実額＋レベル表示 */}
+            {/* 石垣便数: OpenSkyフライトスコア表示 */}
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span style={{ fontSize: 13 }}>✈️</span>
-                <span className="text-xs text-stone-500 flex-1">{lang === 'ja' ? '航空運賃' : 'Flight Price'}</span>
+                <span className="text-xs text-stone-500 flex-1">{lang === 'ja' ? '石垣便数' : 'Flights/Week'}</span>
                 <span className="text-xs font-semibold text-stone-600">
-                  {latest?.flight ? `¥${latest.flight.toLocaleString()}` : '-'}
+                  {estimatedFlights != null ? `~${estimatedFlights}便/週` : '-'}
                   <span className="text-stone-400 font-normal ml-1">({flightLevel})</span>
                 </span>
               </div>
@@ -271,8 +271,8 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
               </div>
               <p className="text-[9px] text-stone-300 mt-0.5">
                 {lang === 'ja'
-                  ? '安め<¥15k / 普通¥15〜20k / 高め¥20〜25k / 激高≥¥25k'
-                  : 'Low<¥15k / Normal¥15-20k / High¥20-25k / Very High≥¥25k'}
+                  ? '少なめ<30便 / 普通30〜55便 / 多め55〜80便 / 激混み≥80便（週次推定）'
+                  : 'Low<30 / Normal30-55 / High55-80 / Very High≥80 flights/week'}
               </p>
             </div>
 
