@@ -61,9 +61,9 @@ const PAPER_PLANS = [
     nameJa: '見開き特集',
     nameEn: 'Feature Spread',
     price: 38000,
-    tagJa: 'ジャンル先頭・A4サイズ相当',
-    tagEn: 'Genre top position — A4 size',
-    note: { ja: '3枠限定（レストラン・バー・キャバ 各1枠）', en: '3 slots only (Restaurant / Bar / Cabaret)' },
+    tagJa: 'ジャンル先頭・A5見開き・5店舗紹介',
+    tagEn: 'Genre top · A5 spread · 5 spots',
+    note: { ja: '3枠（レストラン・バー・キャバ 各1枠）　約W280×H190mm', en: '3 slots (Restaurant / Bar / Cabaret)  W280×H190mm' },
     featured: true,
   },
   {
@@ -71,9 +71,9 @@ const PAPER_PLANS = [
     nameJa: '特大（1ページ）',
     nameEn: 'Full Page',
     price: 30000,
-    tagJa: '目立ち度◎',
-    tagEn: 'Maximum impact',
-    note: { ja: '2枠限定', en: '2 slots only' },
+    tagJa: '',
+    tagEn: '',
+    note: { ja: '2枠　約W138×H200mm', en: '2 slots  W138×H200mm' },
     featured: false,
   },
   {
@@ -83,7 +83,7 @@ const PAPER_PLANS = [
     price: 18000,
     tagJa: '',
     tagEn: '',
-    note: { ja: '4枠', en: '4 slots' },
+    note: { ja: '4枠　約W138×H98mm', en: '4 slots  W138×H98mm' },
     featured: false,
   },
   {
@@ -93,7 +93,7 @@ const PAPER_PLANS = [
     price: 10000,
     tagJa: '',
     tagEn: '',
-    note: { ja: '8枠', en: '8 slots' },
+    note: { ja: '8枠　約W67×H98mm', en: '8 slots  W67×H98mm' },
     featured: false,
   },
   {
@@ -103,7 +103,7 @@ const PAPER_PLANS = [
     price: 5000,
     tagJa: '',
     tagEn: '',
-    note: { ja: '8枠', en: '8 slots' },
+    note: { ja: '8枠　約W67×H47mm', en: '8 slots  W67×H47mm' },
     featured: false,
   },
   {
@@ -113,7 +113,7 @@ const PAPER_PLANS = [
     price: 35000,
     tagJa: '最高視認率・1枠のみ',
     tagEn: 'Highest visibility — 1 slot only',
-    note: { ja: '1枠限定', en: '1 slot only' },
+    note: { ja: '1枠　約W138×H200mm', en: '1 slot  W138×H200mm' },
     featured: false,
   },
 ]
