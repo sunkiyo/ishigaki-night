@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/update-visitors",
-      "schedule": "0 9 1 * *"
+      "schedule": "0 2 1 * *"
+    },
+    {
+      "path": "/api/cron/update-demand",
+      "schedule": "0 2 * * 1"
     }
   ]
 }

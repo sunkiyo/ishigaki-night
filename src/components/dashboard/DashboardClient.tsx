@@ -87,6 +87,15 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const forecastEntries = history.filter((r) => r.isForecast)
   const displayHistory  = [...actualEntries.slice(-8), ...forecastEntries]
 
+  // forecastエントリに信頼度を付与（なければ週順で計算）
+  let forecastCount = 0
+  const displayWithConf = displayHistory.map((r) => {
+    if (!r.isForecast) return { ...r, confidence: r.confidence ?? 1.0 }
+    const conf = r.confidence ?? Math.max(0.15, 1 - forecastCount * 0.11)
+    forecastCount++
+    return { ...r, confidence: conf }
+  })
+
   // 需要レベルカード: 3本バー用の計算
   const trendsScore = latest?.trends ?? 0
   const trendsPt    = Math.round(trendsScore * 0.5)
@@ -429,17 +438,17 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
         <div style={{ height: 220 }}>
           <Bar
             data={{
-              labels: displayHistory.map((r) => fmtDate(r.date)),
+              labels: displayWithConf.map((r) => fmtDate(r.date)),
               datasets: [{
-                data: displayHistory.map((r) => r.index),
-                backgroundColor: displayHistory.map((r) =>
+                data: displayWithConf.map((r) => r.index),
+                backgroundColor: displayWithConf.map((r) =>
                   r.isForecast
-                    ? 'rgba(200,200,200,.35)'
+                    ? `rgba(180,180,180,${(r.confidence * 0.5).toFixed(2)})`
                     : gaugeColor(r.index) + 'aa'
                 ),
-                borderColor: displayHistory.map((r) =>
+                borderColor: displayWithConf.map((r) =>
                   r.isForecast
-                    ? 'rgba(150,150,150,.7)'
+                    ? `rgba(130,130,130,${(r.confidence * 0.9).toFixed(2)})`
                     : gaugeColor(r.index)
                 ),
                 borderWidth: 1,
@@ -454,10 +463,14 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
                 tooltip: {
                   callbacks: {
                     title: (items) => {
-                      const r = displayHistory[items[0].dataIndex]
+                      const r = displayWithConf[items[0].dataIndex]
                       return `${fmtDate(r.date)}週${r.isForecast ? '（予測）' : '（実績）'}`
                     },
-                    label: (item) => `需要指数: ${item.raw} / 100`,
+                    label: (item) => {
+                      const r = displayWithConf[item.dataIndex]
+                      const confStr = r.isForecast ? ` 信頼度: ${Math.round(r.confidence * 100)}%` : ''
+                      return `需要指数: ${item.raw} / 100${confStr}`
+                    },
                   },
                   backgroundColor: '#faf5ee',
                   borderColor: 'rgba(192,112,40,.2)',
