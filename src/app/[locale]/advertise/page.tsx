@@ -9,8 +9,8 @@ const PLANS = [
     tagJa: 'まず試してみたい方に',
     tagEn: 'Just getting started',
     features: {
-      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク'],
-      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'フリーペーパー小枠'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'Free paper small slot'],
     },
     featured: false,
   },
@@ -22,8 +22,8 @@ const PLANS = [
     tagJa: '小さく始めたい方に',
     tagEn: 'To get started',
     features: {
-      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'クーポン発行'],
-      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'Coupon'],
+      ja: ['Web掲載（4言語）', '店舗詳細ページ', 'Googleマップリンク', 'クーポン発行', 'フリーペーパー小枠'],
+      en: ['Web listing (4 languages)', 'Spot detail page', 'Google Maps link', 'Coupon', 'Free paper small slot'],
     },
     featured: false,
   },
