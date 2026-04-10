@@ -31,9 +31,10 @@ async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
   try {
     const url = new URL('https://app.rakuten.co.jp/services/api/Travel/VacantHotelSearch/20170426')
     url.searchParams.set('applicationId', appId)
-    url.searchParams.set('largeClassCode', 'japan')
-    url.searchParams.set('middleClassCode', 'okinawa')
-    url.searchParams.set('smallClassCode', 'ishigaki')
+    // 石垣島の座標で検索（エリアコードより確実）
+    url.searchParams.set('latitude', '24.3336')
+    url.searchParams.set('longitude', '124.1540')
+    url.searchParams.set('searchRadius', '3')
     url.searchParams.set('checkinDate', checkInDate)
     url.searchParams.set('checkoutDate', addDays(checkInDate, 1))
     url.searchParams.set('adultNum', '2')
