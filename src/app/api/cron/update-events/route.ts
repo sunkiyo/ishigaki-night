@@ -7,9 +7,11 @@ export const maxDuration = 60  // Claude API呼び出しのため60秒
 
 // イベント情報を取得するURLリスト
 const EVENT_SOURCES = [
-  { url: 'https://painushima.com/events/',   label: '石垣市観光交流協会' },
-  { url: 'https://painushima.com/',          label: '石垣市観光交流協会TOP' },
-  { url: 'https://www.city.ishigaki.okinawa.jp/', label: '石垣市公式' },
+  { url: 'https://painushima.com/events/',                       label: '石垣市観光交流協会' },
+  { url: 'https://ishigaki.co/',                                 label: '石垣島ドットコム' },
+  { url: 'https://okinawa.yoshimoto.co.jp/ishigaki/',            label: '石垣島よしもと' },
+  { url: 'https://www.jta.co.jp/routemap/ishigaki/event.html',   label: 'JTA石垣イベント' },
+  { url: 'https://www.visit-okinawa.jp/eventinfo/',              label: '沖縄観光コンベンションビューロー' },
 ]
 
 // HTMLからテキストを抽出（タグ除去・圧縮）
