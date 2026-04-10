@@ -14,8 +14,10 @@ import {
 import { Bar } from 'react-chartjs-2'
 import type { DemandEntry } from '@/lib/demand'
 import type { YearData } from '@/lib/visitorData'
+import type { IslandEvent } from '@/lib/demandEvents'
 import { getStatus } from '@/lib/demand'
 import { getLatestYear, wareki, MONTHS_JA, MONTHS_EN } from '@/lib/visitorData'
+import EventsSection from '@/components/dashboard/EventsSection'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, LineController, BarController, ArcElement, Filler, Tooltip, Legend)
 
@@ -36,10 +38,11 @@ function gaugeColor(idx: number) {
 type Props = {
   history: DemandEntry[]
   officialData: Record<number, YearData>
+  upcomingEvents?: IslandEvent[]
   lang: string
 }
 
-export default function DashboardClient({ history, officialData, lang }: Props) {
+export default function DashboardClient({ history, officialData, upcomingEvents = [], lang }: Props) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -599,6 +602,9 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
           </table>
         </div>
       </div>
+
+      {/* 直近のイベント */}
+      <EventsSection events={upcomingEvents} lang={lang} />
 
     </div>
   )

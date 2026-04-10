@@ -5,6 +5,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import DashboardClient from '@/components/dashboard/DashboardClient'
 import { getDemandHistory } from '@/lib/demand'
 import { getOfficialDataFromDB } from '@/lib/visitorData'
+import { getUpcomingEvents } from '@/lib/demandEvents'
 
 export function generateStaticParams() {
   return [{ locale: 'ja' }, { locale: 'en' }, { locale: 'zh' }, { locale: 'ko' }]
@@ -17,8 +18,11 @@ export default async function DashboardPage({
 }) {
   setRequestLocale(locale)
   const t = await getTranslations('dashboard')
-  const history = await getDemandHistory()
-  const officialData = await getOfficialDataFromDB()
+  const [history, officialData, upcomingEvents] = await Promise.all([
+    getDemandHistory(),
+    getOfficialDataFromDB(),
+    getUpcomingEvents(35),
+  ])
 
   return (
     <div className="px-4 py-6">
@@ -37,6 +41,7 @@ export default async function DashboardPage({
         <DashboardClient
           history={history}
           officialData={officialData}
+          upcomingEvents={upcomingEvents}
           lang={locale}
         />
       </div>
