@@ -47,7 +47,6 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const idx    = latest?.index ?? 0
   const status = getStatus(idx)
   const cfg    = STATUS_CONFIG[status]
-  const color  = gaugeColor(idx)
   const lbl    = cfg.label[lang as 'ja' | 'en' | 'zh'] ?? cfg.label.ja
   const months = lang === 'en' ? MONTHS_EN : MONTHS_JA
 
