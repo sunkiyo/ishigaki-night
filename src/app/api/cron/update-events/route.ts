@@ -113,7 +113,7 @@ ${sourceText}`
   }
 }
 
-export async function GET(_request: Request) {
+export async function GET() {
   // 一時的に認証をスキップ（テスト後に戻す）
   // const authHeader = request.headers.get('authorization')
   // if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
