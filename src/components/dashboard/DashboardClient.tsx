@@ -55,6 +55,17 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
   const cur     = officialData[latestY]
   const prevY   = officialData[latestY - 1]
 
+  // 今週の需要指数カード用: 最新の実績エントリを中心に前後3週ずつ、計7本
+  const latestActualIdx = history.reduce((acc, r, i) => (!r.isForecast ? i : acc), 0)
+  const weekStart   = Math.max(0, latestActualIdx - 3)
+  const weekEntries = history.slice(weekStart, weekStart + 7)
+
+  // 日付を "M/D" 形式に変換するヘルパー
+  const fmtDate = (dateStr: string) => {
+    const [, m, d] = dateStr.split('-')
+    return `${Number(m)}/${Number(d)}`
+  }
+
   if (!mounted) return <div className="h-96 flex items-center justify-center text-stone-400 text-sm">Loading...</div>
 
   return (
@@ -63,21 +74,75 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
       {/* HERO BAND */}
       <div className="grid md:grid-cols-3 gap-4">
 
-        {/* スコアカード */}
-        <div className="bg-surface border border-stone-200 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-          <p className="text-xs tracking-widest uppercase text-stone-400 mb-3">
-            {lang === 'ja' ? '今週の需要指数' : lang === 'zh' ? '本週需求指數' : 'This Week'}
-          </p>
-          <div className="text-7xl font-bold leading-none mb-2" style={{ color, fontVariantNumeric: 'tabular-nums' }}>
-            {idx}
+        {/* 今週の需要指数 — 前後3週を含む7本棒グラフ */}
+        <div className="bg-surface border border-stone-200 rounded-xl p-5 flex flex-col">
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-xs tracking-widest uppercase text-stone-400">
+              {lang === 'ja' ? '今週の需要指数' : lang === 'zh' ? '本週需求指數' : 'This Week'}
+            </p>
+            <span
+              className="text-xs font-semibold px-3 py-0.5 rounded-full"
+              style={{ color: cfg.color, background: cfg.color + '22', border: `1px solid ${cfg.color}44` }}
+            >
+              {idx} — {lbl}
+            </span>
           </div>
-          <p className="text-xs text-stone-400 mb-3">/ 100</p>
-          <span
-            className="text-sm font-semibold px-4 py-1 rounded-full"
-            style={{ color: cfg.color, background: cfg.color + '22', border: `1px solid ${cfg.color}44` }}
-          >
-            {lbl}
-          </span>
+          <p className="text-xs text-stone-400 mb-3">
+            {lang === 'ja' ? '前後3週の推移（週始め日付）' : '±3 weeks trend'}
+          </p>
+          <div style={{ flex: 1, minHeight: 130 }}>
+            <Bar
+              data={{
+                labels: weekEntries.map((r) => fmtDate(r.date)),
+                datasets: [{
+                  data: weekEntries.map((r) => r.index),
+                  backgroundColor: weekEntries.map((r) =>
+                    r.isForecast ? 'rgba(200,200,200,.35)' : gaugeColor(r.index) + 'aa'
+                  ),
+                  borderColor: weekEntries.map((r) =>
+                    r.isForecast ? 'rgba(150,150,150,.7)' : gaugeColor(r.index)
+                  ),
+                  borderWidth: 1,
+                  borderRadius: 3,
+                }],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      title: (items) => {
+                        const entry = weekEntries[items[0].dataIndex]
+                        return `${fmtDate(entry.date)}週${entry.isForecast ? '（予測）' : '（実績）'}`
+                      },
+                      label: (item) => `需要指数: ${item.raw}`,
+                    },
+                    backgroundColor: '#faf5ee',
+                    borderColor: 'rgba(192,112,40,.2)',
+                    borderWidth: 1,
+                    titleColor: '#2d1f0e',
+                    bodyColor: '#7a6048',
+                  },
+                },
+                scales: {
+                  x: { ticks: { color: '#a89070', font: { size: 9 } }, grid: { display: false } },
+                  y: { min: 0, max: 100, display: false },
+                },
+              }}
+            />
+          </div>
+          <div className="flex gap-3 text-xs text-stone-400 mt-2">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-4 h-2 rounded-sm" style={{ background: '#d4923faa' }} />
+              {lang === 'ja' ? '実績' : 'Actual'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-4 h-2 rounded-sm" style={{ background: 'rgba(200,200,200,.35)', border: '1px dashed #aaa' }} />
+              {lang === 'ja' ? '予測' : 'Forecast'}
+            </span>
+          </div>
         </div>
 
         {/* ゲージ */}
@@ -233,12 +298,17 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
 
       {/* 需要指数履歴 */}
       <div className="bg-surface border border-stone-200 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-medium text-stone-700">
-            {lang === 'ja' ? '需要指数 過去実績＋予測' : 'Demand Index History + Forecast'}
-          </p>
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-sm font-medium text-stone-700">
+              {lang === 'ja' ? '需要指数 過去実績＋予測' : 'Demand Index History + Forecast'}
+            </p>
+            <p className="text-xs text-stone-400 mt-0.5">
+              {lang === 'ja' ? '需要指数：0（閑散）〜100（激混み）、縦軸の数字が大きいほど混雑' : 'Index: 0 (slow) – 100 (peak), higher = busier'}
+            </p>
+          </div>
           {/* 凡例 */}
-          <div className="flex items-center gap-4 text-xs text-stone-400">
+          <div className="flex items-center gap-4 text-xs text-stone-400 shrink-0">
             <span className="flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#d4923faa', border: '1px solid #d4923f' }} />
               {lang === 'ja' ? '実績' : 'Actual'}
@@ -249,10 +319,10 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
             </span>
           </div>
         </div>
-        <div style={{ height: 200 }}>
+        <div style={{ height: 220 }}>
           <Bar
             data={{
-              labels: history.map((r) => r.date.slice(5)),
+              labels: history.map((r) => fmtDate(r.date)),
               datasets: [{
                 data: history.map((r) => r.index),
                 backgroundColor: history.map((r) =>
@@ -272,10 +342,49 @@ export default function DashboardClient({ history, officialData, lang }: Props) 
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    title: (items) => {
+                      const r = history[items[0].dataIndex]
+                      return `${fmtDate(r.date)}週${r.isForecast ? '（予測）' : '（実績）'}`
+                    },
+                    label: (item) => `需要指数: ${item.raw} / 100`,
+                  },
+                  backgroundColor: '#faf5ee',
+                  borderColor: 'rgba(192,112,40,.2)',
+                  borderWidth: 1,
+                  titleColor: '#2d1f0e',
+                  bodyColor: '#7a6048',
+                },
+              },
               scales: {
-                x: { ticks: { color: '#a89070', font: { size: 9 } }, grid: { display: false } },
-                y: { min: 0, max: 100, ticks: { color: '#a89070', font: { size: 9 }, stepSize: 25 }, grid: { color: 'rgba(26,18,8,.05)' } },
+                x: {
+                  ticks: { color: '#a89070', font: { size: 9 } },
+                  grid: { display: false },
+                  title: { display: true, text: lang === 'ja' ? '日付（週始め）' : 'Date (week start)', color: '#b8a090', font: { size: 9 } },
+                },
+                y: {
+                  min: 0,
+                  max: 100,
+                  ticks: {
+                    color: '#a89070',
+                    font: { size: 9 },
+                    stepSize: 25,
+                    callback: (v) => {
+                      const n = Number(v)
+                      if (n === 0)   return '0 閑散'
+                      if (n === 25)  return '25'
+                      if (n === 50)  return '50'
+                      if (n === 75)  return '75 激混み'
+                      if (n === 100) return '100'
+                      return String(n)
+                    },
+                  },
+                  grid: { color: 'rgba(26,18,8,.05)' },
+                  title: { display: true, text: lang === 'ja' ? '需要指数' : 'Demand Index', color: '#b8a090', font: { size: 9 } },
+                },
               },
             }}
           />
