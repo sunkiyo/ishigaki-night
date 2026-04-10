@@ -33,7 +33,7 @@ async function fetchHotelVacancy(checkInDate: string): Promise<number | null> {
     url.searchParams.set('applicationId', appId)
     url.searchParams.set('largeClassCode', 'japan')
     url.searchParams.set('middleClassCode', 'okinawa')
-    url.searchParams.set('smallClassCode', 'yaeyama')
+    url.searchParams.set('smallClassCode', 'ritou')  // 石垣・西表・小浜島
     url.searchParams.set('checkinDate', checkInDate)
     url.searchParams.set('checkoutDate', addDays(checkInDate, 1))
     url.searchParams.set('adultNum', '2')
