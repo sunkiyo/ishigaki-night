@@ -31,7 +31,8 @@ export const BOOST_LABEL = (b: number): string =>
 /** Supabase から今日〜指定日数先のイベントを取得 */
 export async function getUpcomingEvents(days = 35): Promise<IslandEvent[]> {
   try {
-    const { supabase } = await import('@/lib/supabase')
+    const { getSupabaseAdmin } = await import('@/lib/supabaseAdmin')
+    const supabase = getSupabaseAdmin()
     const today = new Date().toISOString().slice(0, 10)
     const until = new Date(Date.now() + days * 24 * 3600 * 1000).toISOString().slice(0, 10)
 
