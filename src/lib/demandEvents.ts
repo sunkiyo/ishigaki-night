@@ -40,7 +40,6 @@ export async function getUpcomingEvents(days = 35): Promise<IslandEvent[]> {
       .select('*')
       .gte('event_date', today)
       .lte('event_date', until)
-      .eq('is_confirmed', true)
       .order('event_date')
 
     if (error || !data) return []

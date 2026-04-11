@@ -11,6 +11,9 @@ export function generateStaticParams() {
   return [{ locale: 'ja' }, { locale: 'en' }, { locale: 'zh' }, { locale: 'ko' }]
 }
 
+// イベントを常に最新表示するため1時間ごとに再生成
+export const revalidate = 3600
+
 export default async function DashboardPage({
   params: { locale },
 }: {
