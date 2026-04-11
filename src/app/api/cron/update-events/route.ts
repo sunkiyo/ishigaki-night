@@ -20,9 +20,9 @@ type ExtractedEvent = {
  * Claudeの知識から石垣島の今後イベントを生成する
  * スクレイピング不要・Vercelのネットワーク制限に非依存
  */
-async function generateEventsWithClaude(): Promise<ExtractedEvent[]> {
+async function generateEventsWithClaude(): Promise<{ events: ExtractedEvent[]; raw: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return []
+  if (!apiKey) return { events: [], raw: 'no api key' }
 
   const client = new Anthropic({ apiKey })
   const today = new Date().toISOString().slice(0, 10)
@@ -96,12 +96,13 @@ JSON配列のみ返してください（説明文不要）:
     const jsonMatch = cleaned.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
       console.error('No JSON array found in response:', raw.slice(0, 300))
-      return []
+      return { events: [], raw: raw.slice(0, 500) }
     }
-    return JSON.parse(jsonMatch[0]) as ExtractedEvent[]
+    const events = JSON.parse(jsonMatch[0]) as ExtractedEvent[]
+    return { events, raw: raw.slice(0, 200) }
   } catch (e) {
     console.error('Claude generation failed:', e)
-    throw e  // re-throw so caller can capture error detail
+    throw e
   }
 }
 
@@ -117,7 +118,9 @@ export async function GET(request: Request) {
   // Claudeの知識からイベント生成
   let generated: ExtractedEvent[] = []
   try {
-    generated = await generateEventsWithClaude()
+    const result = await generateEventsWithClaude()
+    generated = result.events
+    debug.claude_raw = result.raw
   } catch (e) {
     debug.error = e instanceof Error ? e.message : String(e)
     return NextResponse.json({
