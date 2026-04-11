@@ -63,22 +63,21 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
     return `${Number(m)}/${Number(d)}`
   }
 
-  // 今週（月〜日）の日別需要指数を生成
+  // 今日〜6日後（合計7日間）の日別需要指数を生成
   // 夜の繁華街向け曜日係数: 月〜日
   const DOW_MULTIPLIERS = [0.55, 0.62, 0.72, 0.82, 1.22, 1.32, 0.88]
   const DOW_LABELS_JA   = ['月', '火', '水', '木', '金', '土', '日']
-  const todayJs   = new Date()
-  const todayDow  = todayJs.getDay() // 0=Sun
-  const mondayJs  = new Date(todayJs)
-  mondayJs.setDate(todayJs.getDate() - ((todayDow + 6) % 7))
+  const todayJs = new Date()
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(mondayJs)
-    d.setDate(mondayJs.getDate() + i)
-    const isToday   = d.toDateString() === todayJs.toDateString()
-    const isFuture  = d > todayJs
-    const dailyIdx  = Math.min(100, Math.round(idx * DOW_MULTIPLIERS[i]))
+    const d = new Date(todayJs)
+    d.setDate(todayJs.getDate() + i)
+    const dow      = d.getDay() // 0=Sun
+    const dowIdx   = dow === 0 ? 6 : dow - 1  // 0=月…6=日
+    const isToday  = i === 0
+    const isFuture = i > 0
+    const dailyIdx = Math.min(100, Math.round(idx * DOW_MULTIPLIERS[dowIdx]))
     return {
-      label: [DOW_LABELS_JA[i], `${d.getMonth() + 1}/${d.getDate()}`] as [string, string],
+      label: [DOW_LABELS_JA[dowIdx], `${d.getMonth() + 1}/${d.getDate()}`] as [string, string],
       index: dailyIdx,
       isToday,
       isFuture,
@@ -125,7 +124,7 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
         <div className="bg-surface border border-stone-200 rounded-xl p-5 flex flex-col">
           <div className="flex items-center justify-between mb-0.5">
             <p className="text-xs tracking-widest uppercase text-stone-400">
-              {lang === 'ja' ? '今週の需要指数' : lang === 'zh' ? '本週需求指數' : 'This Week'}
+              {lang === 'ja' ? '今後7日の需要指数' : lang === 'zh' ? '未來7天需求指數' : 'Next 7 Days'}
             </p>
             <span
               className="text-xs font-semibold px-3 py-0.5 rounded-full"
@@ -135,7 +134,7 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
             </span>
           </div>
           <p className="text-xs text-stone-400 mb-3">
-            {lang === 'ja' ? '曜日別の予測需要（今日以降は推定）' : 'Daily demand estimate this week'}
+            {lang === 'ja' ? '今日を起点に7日間の予測需要' : 'Demand forecast from today for 7 days'}
           </p>
           <div style={{ flex: 1, minHeight: 130 }}>
             <Bar
