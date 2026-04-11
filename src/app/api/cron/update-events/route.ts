@@ -82,18 +82,21 @@ JSON配列のみ返してください（説明文不要）:
 
   try {
     const msg = await client.messages.create({
-      model: 'claude-haiku-4-5',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     })
 
     const raw = (msg.content[0] as { type: string; text: string }).text.trim()
     const jsonMatch = raw.match(/\[[\s\S]*\]/)
-    if (!jsonMatch) return []
+    if (!jsonMatch) {
+      console.error('No JSON array found in response:', raw.slice(0, 200))
+      return []
+    }
     return JSON.parse(jsonMatch[0]) as ExtractedEvent[]
   } catch (e) {
     console.error('Claude generation failed:', e)
-    return []
+    throw e  // re-throw so caller can capture error detail
   }
 }
 
@@ -107,13 +110,24 @@ export async function GET(request: Request) {
   const debug: Record<string, unknown> = { has_api_key: !!process.env.ANTHROPIC_API_KEY, mode: 'claude-knowledge' }
 
   // Claudeの知識からイベント生成
-  const generated = await generateEventsWithClaude()
+  let generated: ExtractedEvent[] = []
+  try {
+    generated = await generateEventsWithClaude()
+  } catch (e) {
+    debug.error = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({
+      success: false,
+      message: 'Claude API呼び出しに失敗しました',
+      upserted: 0,
+      debug,
+    })
+  }
   debug.generated_count = generated.length
 
   if (generated.length === 0) {
     return NextResponse.json({
       success: false,
-      message: 'ANTHROPIC_API_KEY が未設定か、生成に失敗しました',
+      message: 'イベントを生成できませんでした（JSONパース失敗の可能性）',
       upserted: 0,
       debug,
     })
