@@ -83,7 +83,7 @@ JSON配列のみ返してください（説明文不要）:
   try {
     const msg = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }],
     })
 
