@@ -88,9 +88,14 @@ JSON配列のみ返してください（説明文不要）:
     })
 
     const raw = (msg.content[0] as { type: string; text: string }).text.trim()
-    const jsonMatch = raw.match(/\[[\s\S]*\]/)
+    // マークダウンコードブロック（```json ... ```）を除去してからパース
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/, '')
+      .trim()
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
-      console.error('No JSON array found in response:', raw.slice(0, 200))
+      console.error('No JSON array found in response:', raw.slice(0, 300))
       return []
     }
     return JSON.parse(jsonMatch[0]) as ExtractedEvent[]
