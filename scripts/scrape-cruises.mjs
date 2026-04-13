@@ -46,7 +46,7 @@ async function scrapeCruises() {
   // テーブルの行を取得
   const rows = await page.$$eval('table tr', trs =>
     trs.slice(1).map(tr => {
-      const cells = [...tr.querySelectorAll('td')].map(td => td.innerText.trim())
+      const cells = [...tr.querySelectorAll('td, th')].map(td => td.innerText.trim())
       return cells
     }).filter(cells => cells.length >= 6)
   )
@@ -54,39 +54,41 @@ async function scrapeCruises() {
   await browser.close()
   console.log(`  → ${rows.length} 件取得`)
 
-  // パース
+  // パース（日付パターンを持つセルのインデックスを動的に探す）
+  const parseTime = (text) => text?.match(/(\d{2}:\d\d)$/)?.[1] ?? null
+  const parseDate = (text) => {
+    const m = text?.match(/(\d{4})\/(\d{2})\/(\d{2})/)
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : null
+  }
+
   const cruises = []
   for (const cells of rows) {
-    // cells: [項目番号, 入港日時, 出港日時, OverNight, バース, 船名, 旅客定員数, 運航経路, 代理店, 申請No, アクション]
-    // インデックスは空白セルのずれがあるため柔軟に
-    const raw = cells.join('\t')
+    // 日付セルを探す（入港日時・出港日時は連続する）
+    const dateIndices = cells.map((c, i) => /\d{4}\/\d{2}\/\d{2}/.test(c) ? i : -1).filter(i => i >= 0)
+    if (dateIndices.length < 1) continue
 
-    const dateMatch = raw.match(/(\d{4})\/(\d{2})\/(\d{2})/)
-    if (!dateMatch) continue
+    const arrivalCell    = cells[dateIndices[0]] ?? ''
+    const departureCell  = cells[dateIndices[1]] ?? ''
+    const arrivalDate    = parseDate(arrivalCell)
+    if (!arrivalDate) continue
+    const arrivalTime    = parseTime(arrivalCell)
+    const departureTime  = parseTime(departureCell)
 
-    const arrivalDate = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`
-    const arrivalTime = raw.match(/(\d{4}\/\d{2}\/\d{2}) \([^)]+\) (\d{2}:\d{2})/)?.[2] ?? null
-
-    // 出港日時
-    const depMatch = raw.match(/\d{4}\/\d{2}\/\d{2} \([^)]+\) \d{2}:\d{2}.*?(\d{4}\/\d{2}\/(\d{2}))? \([^)]+\) (\d{2}:\d{2})/)
-    const departureTimes = [...raw.matchAll(/\d{4}\/\d{2}\/\d{2} \([^)]+\) (\d{2}:\d{2})/g)]
-    const departureTime = departureTimes[1]?.[1] ?? null
-
-    // 船名 (日付・時刻・数字以外で最初の英字っぽいもの)
-    const shipMatch = raw.match(/([A-Z][A-Z\s]+[A-Z])/)
-    const shipName = shipMatch?.[1]?.trim() ?? null
+    // 日付セルより後の残りセルから船名・乗客数・航路を取得
+    const afterDateCells = cells.slice(dateIndices[dateIndices.length - 1] + 1)
+    // バース（石垣岸壁など）をスキップして船名（大文字英字）を探す
+    const shipName = afterDateCells.find(c => /^[A-Z][A-Z\s]{3,}/.test(c))?.trim() ?? null
     if (!shipName) continue
 
-    // 乗客定員数
-    const passengersMatch = raw.match(/\t(\d[,\d]+)\t/)
-    const passengers = passengersMatch ? parseInt(passengersMatch[1].replace(',', '')) : null
+    // 乗客定員数（カンマ付き数字）
+    const passengers = (() => {
+      const c = afterDateCells.find(c => /^\d[,\d]+$/.test(c))
+      return c ? parseInt(c.replace(',', '')) : null
+    })()
 
-    // バース
-    const berth = raw.includes('石垣岸壁') ? '石垣岸壁' : raw.includes('旅客') ? '旅客ターミナル' : null
-
-    // 運航経路
-    const routeMatch = raw.match(/([^\t]*[ー\-][^\t]*基隆[^\t]*|[^\t]*基隆[^\t]*|[^\t]*[A-Z]{2,}[^\t]*[ー\-][^\t]*)/)
-    const route = routeMatch?.[1]?.trim() ?? null
+    // 航路（ハイフン区切り）
+    const route = afterDateCells.find(c => /[ー\-]/.test(c) && c.length > 5 && !/^\d/.test(c)) ?? null
+    const berth = afterDateCells.find(c => /岸壁|バース|ターミナル/.test(c)) ?? null
 
     cruises.push({ arrivalDate, arrivalTime, departureTime, shipName, passengers, berth, route })
   }
