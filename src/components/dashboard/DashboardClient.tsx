@@ -650,10 +650,16 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
               const dateLabel = `${Number(m)}/${Number(d)}`
               return (
                 <div key={c.id} className="flex items-center gap-3 py-2 border-b border-stone-100 last:border-0">
-                  <div className="w-12 text-center">
+                  <div className="w-16 text-center flex-shrink-0">
                     <p className="text-xs text-stone-400">🚢</p>
                     <p className="text-sm font-semibold text-stone-700">{dateLabel}</p>
-                    {c.arrival_time && <p className="text-[10px] text-stone-400">{c.arrival_time}</p>}
+                    {c.arrival_time && c.departure_time ? (
+                      <p className="text-[10px] text-stone-400 leading-tight">
+                        {c.arrival_time}〜{c.departure_time}
+                      </p>
+                    ) : c.arrival_time ? (
+                      <p className="text-[10px] text-stone-400">{c.arrival_time}〜</p>
+                    ) : null}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-stone-700 truncate">{c.ship_name}</p>
