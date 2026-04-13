@@ -15,6 +15,8 @@ import { Bar } from 'react-chartjs-2'
 import type { DemandEntry } from '@/lib/demand'
 import type { YearData } from '@/lib/visitorData'
 import type { IslandEvent } from '@/lib/demandEvents'
+import type { CruiseArrival } from '@/lib/cruiseData'
+import { cruiseDemandBoost, cruiseSizeLabel } from '@/lib/cruiseData'
 import { getStatus } from '@/lib/demand'
 import { getLatestYear, wareki, MONTHS_JA, MONTHS_EN } from '@/lib/visitorData'
 import EventsSection from '@/components/dashboard/EventsSection'
@@ -39,10 +41,11 @@ type Props = {
   history: DemandEntry[]
   officialData: Record<number, YearData>
   upcomingEvents?: IslandEvent[]
+  upcomingCruises?: CruiseArrival[]
   lang: string
 }
 
-export default function DashboardClient({ history, officialData, upcomingEvents = [], lang }: Props) {
+export default function DashboardClient({ history, officialData, upcomingEvents = [], upcomingCruises = [], lang }: Props) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -75,12 +78,18 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
     const dowIdx   = dow === 0 ? 6 : dow - 1  // 0=月…6=日
     const isToday  = i === 0
     const isFuture = i > 0
-    const dailyIdx = Math.min(100, Math.round(idx * DOW_MULTIPLIERS[dowIdx]))
+    const dateStr  = d.toISOString().slice(0, 10)
+    // クルーズ船入港ブースト
+    const cruise   = upcomingCruises.find(c => c.arrival_date === dateStr) ?? null
+    const boost    = cruise ? cruiseDemandBoost(cruise.passengers) : 0
+    const baseIdx  = Math.round(idx * DOW_MULTIPLIERS[dowIdx])
+    const dailyIdx = Math.min(100, Math.round(baseIdx + boost * 100 * 0.3))
     return {
       label: [DOW_LABELS_JA[dowIdx], `${d.getMonth() + 1}/${d.getDate()}`] as [string, string],
       index: dailyIdx,
       isToday,
       isFuture,
+      cruise,
     }
   })
 
@@ -165,7 +174,12 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
                         const d = weekDays[items[0].dataIndex]
                         return `${d.label[0]}曜 ${d.label[1]}${d.isToday ? '（今日）' : d.isFuture ? '（推定）' : ''}`
                       },
-                      label: (item) => `需要指数: ${item.raw}`,
+                      label: (item) => {
+                        const d = weekDays[item.dataIndex]
+                        const lines = [`需要指数: ${item.raw}`]
+                        if (d.cruise) lines.push(`🚢 ${d.cruise.ship_name} (${d.cruise.passengers?.toLocaleString() ?? '?'}人)`)
+                        return lines
+                      },
                     },
                     backgroundColor: '#faf5ee',
                     borderColor: 'rgba(192,112,40,.2)',
@@ -182,8 +196,19 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
             />
           </div>
           <p className="text-xs text-stone-400 mt-2">
-            {lang === 'ja' ? '太枠＝今日　薄色＝今日以降の推定' : 'Bold border = today, light = estimated'}
+            {lang === 'ja' ? '太枠＝今日　薄色＝今日以降の推定　🚢＝クルーズ船入港日' : 'Bold = today, light = estimated, 🚢 = cruise day'}
           </p>
+          {/* クルーズ船入港ミニバッジ */}
+          {weekDays.some(d => d.cruise) && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {weekDays.filter(d => d.cruise).map((d, i) => (
+                <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  🚢 {d.label[1]} {d.cruise!.ship_name.split(' ').slice(-1)[0]}
+                  {d.cruise!.passengers && ` ${(d.cruise!.passengers / 1000).toFixed(1)}k人`}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ゲージ */}
@@ -604,6 +629,56 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
 
       {/* 直近のイベント */}
       <EventsSection events={upcomingEvents} lang={lang} />
+
+      {/* クルーズ船入港スケジュール */}
+      <div className="bg-surface border border-stone-200 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs tracking-widest uppercase text-stone-400">
+            {lang === 'ja' ? 'クルーズ船入港スケジュール' : 'Cruise Ship Arrivals'}
+          </p>
+          <span className="text-xs text-stone-400">石垣港</span>
+        </div>
+        {upcomingCruises.length === 0 ? (
+          <p className="text-sm text-stone-400 text-center py-4">今後35日間の入港情報はありません</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {upcomingCruises.map((c) => {
+              const boost = cruiseDemandBoost(c.passengers)
+              const sizeLabel = cruiseSizeLabel(c.passengers)
+              const sizeColor = boost >= 0.40 ? '#f05350' : boost >= 0.30 ? '#f0b865' : boost >= 0.20 ? '#3ec768' : '#94a3b8'
+              const [, m, d] = c.arrival_date.split('-')
+              const dateLabel = `${Number(m)}/${Number(d)}`
+              return (
+                <div key={c.id} className="flex items-center gap-3 py-2 border-b border-stone-100 last:border-0">
+                  <div className="w-12 text-center">
+                    <p className="text-xs text-stone-400">🚢</p>
+                    <p className="text-sm font-semibold text-stone-700">{dateLabel}</p>
+                    {c.arrival_time && <p className="text-[10px] text-stone-400">{c.arrival_time}</p>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-stone-700 truncate">{c.ship_name}</p>
+                    {c.route && <p className="text-[11px] text-stone-400 truncate">{c.route}</p>}
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span
+                      className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={{ color: sizeColor, background: sizeColor + '22', border: `1px solid ${sizeColor}44` }}
+                    >
+                      {sizeLabel}
+                    </span>
+                    {c.passengers && (
+                      <p className="text-[11px] text-stone-400 mt-0.5">{c.passengers.toLocaleString()}人</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <p className="text-[10px] text-stone-300 mt-3 text-right">
+          出典: 石垣港クルーズ船寄港予約システム
+        </p>
+      </div>
 
     </div>
   )

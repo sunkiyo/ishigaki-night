@@ -6,6 +6,7 @@ import DashboardClient from '@/components/dashboard/DashboardClient'
 import { getDemandHistory } from '@/lib/demand'
 import { getOfficialDataFromDB } from '@/lib/visitorData'
 import { getUpcomingEvents } from '@/lib/demandEvents'
+import { getUpcomingCruises } from '@/lib/cruiseData'
 
 export function generateStaticParams() {
   return [{ locale: 'ja' }, { locale: 'en' }, { locale: 'zh' }, { locale: 'ko' }]
@@ -21,10 +22,11 @@ export default async function DashboardPage({
 }) {
   setRequestLocale(locale)
   const t = await getTranslations('dashboard')
-  const [history, officialData, upcomingEvents] = await Promise.all([
+  const [history, officialData, upcomingEvents, upcomingCruises] = await Promise.all([
     getDemandHistory(),
     getOfficialDataFromDB(),
     getUpcomingEvents(35),
+    getUpcomingCruises(35),
   ])
 
   return (
@@ -45,6 +47,7 @@ export default async function DashboardPage({
           history={history}
           officialData={officialData}
           upcomingEvents={upcomingEvents}
+          upcomingCruises={upcomingCruises}
           lang={locale}
         />
       </div>
