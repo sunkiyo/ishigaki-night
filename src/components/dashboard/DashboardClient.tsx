@@ -66,6 +66,16 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
     return `${Number(m)}/${Number(d)}`
   }
 
+  // 週の開始日〜終了日を "M/D~D" または "M/D~M/D" 形式に変換
+  const fmtWeek = (dateStr: string) => {
+    const start = new Date(dateStr)
+    const end   = new Date(dateStr)
+    end.setDate(end.getDate() + 6)
+    const sm = start.getMonth() + 1, sd = start.getDate()
+    const em = end.getMonth()   + 1, ed = end.getDate()
+    return sm === em ? `${sm}/${sd}~${ed}` : `${sm}/${sd}~${em}/${ed}`
+  }
+
   // 今日〜6日後（合計7日間）の日別需要指数を生成
   // 夜の繁華街向け曜日係数: 月〜日
   const DOW_MULTIPLIERS = [0.55, 0.62, 0.72, 0.82, 1.22, 1.32, 0.88]
@@ -465,7 +475,7 @@ export default function DashboardClient({ history, officialData, upcomingEvents 
         <div style={{ height: 220 }}>
           <Bar
             data={{
-              labels: displayWithConf.map((r) => fmtDate(r.date)),
+              labels: displayWithConf.map((r) => fmtWeek(r.date)),
               datasets: [{
                 data: displayWithConf.map((r) => r.index),
                 backgroundColor: displayWithConf.map((r) =>
