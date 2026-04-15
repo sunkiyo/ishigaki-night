@@ -81,14 +81,14 @@ export default function EventsSection({ events, lang }: Props) {
               style={{ border: `1px solid ${cat.color}33`, background: isNear ? cat.bg : undefined }}
             >
               {/* 日付バッジ */}
-              <div className="flex-shrink-0 text-center min-w-[44px]">
+              <div className="flex-shrink-0 text-center min-w-[48px]">
                 <div
-                  className="text-xs font-bold leading-none"
+                  className="text-sm font-bold leading-none"
                   style={{ color: cat.color }}
                 >
                   {new Date(ev.event_date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
                 </div>
-                <div className="text-[9px] text-stone-400 mt-0.5">
+                <div className="text-xs text-stone-400 mt-0.5">
                   {days === 0 ? '今日' : days === 1 ? '明日' : `${days}日後`}
                 </div>
               </div>
@@ -96,12 +96,12 @@ export default function EventsSection({ events, lang }: Props) {
               {/* イベント情報 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm">{cat.icon}</span>
-                  <span className="text-xs font-semibold text-stone-700 truncate">
+                  <span className="text-base">{cat.icon}</span>
+                  <span className="text-sm font-semibold text-stone-700 truncate">
                     {lang === 'en' && ev.event_name_en ? ev.event_name_en : ev.event_name}
                   </span>
                   {isNear && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">
                       まもなく
                     </span>
                   )}
@@ -109,31 +109,31 @@ export default function EventsSection({ events, lang }: Props) {
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   {/* カテゴリ */}
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded-full font-medium"
+                    className="text-xs px-1.5 py-0.5 rounded-full font-medium"
                     style={{ color: cat.color, background: cat.bg }}
                   >
                     {lang === 'en' ? cat.labelEn : cat.label}
                   </span>
                   {/* 需要インパクト */}
-                  <span className="text-[9px] text-stone-400">
+                  <span className="text-xs text-stone-400">
                     {BOOST_LABEL(ev.demand_boost)}
                   </span>
                   {/* 会場 */}
                   {ev.venue && (
-                    <span className="text-[9px] text-stone-400 truncate">
+                    <span className="text-xs text-stone-400 truncate">
                       📍 {ev.venue}
                     </span>
                   )}
                   {/* 複数日 */}
                   {ev.event_end_date && ev.event_end_date !== ev.event_date && (
-                    <span className="text-[9px] text-stone-400">
+                    <span className="text-xs text-stone-400">
                       〜{formatDate(ev.event_end_date, lang)}
                     </span>
                   )}
                 </div>
                 {/* 説明文 */}
                 {ev.note && (
-                  <p className="text-[9px] text-stone-500 mt-1 leading-relaxed line-clamp-2">
+                  <p className="text-xs text-stone-500 mt-1.5 leading-relaxed line-clamp-3">
                     {ev.note}
                   </p>
                 )}
@@ -145,7 +145,7 @@ export default function EventsSection({ events, lang }: Props) {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 text-[9px] text-blue-400 hover:text-blue-600 mt-0.5"
+                      className="inline-flex items-center gap-0.5 text-xs text-blue-400 hover:text-blue-600 mt-1"
                     >
                       🔗 {sourceDomain(ev.source_url)}
                     </a>
@@ -156,14 +156,14 @@ export default function EventsSection({ events, lang }: Props) {
               {/* 需要ブーストバー */}
               <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
                 <div
-                  className="w-1.5 rounded-full"
+                  className="w-2 rounded-full"
                   style={{
                     height: `${Math.round(ev.demand_boost * 80) + 8}px`,
                     background: cat.color,
                     opacity: 0.8,
                   }}
                 />
-                <span className="text-[8px] text-stone-400">
+                <span className="text-xs text-stone-400">
                   +{Math.round(ev.demand_boost * 100)}%
                 </span>
               </div>
@@ -173,7 +173,7 @@ export default function EventsSection({ events, lang }: Props) {
       </div>
 
       {/* フッター注記 */}
-      <p className="text-[9px] text-stone-300 mt-3 text-right">
+      <p className="text-xs text-stone-300 mt-3 text-right">
         {lang === 'ja'
           ? '※ イベント情報はSupabaseダッシュボードから随時更新可能'
           : '※ Events can be updated anytime via Supabase dashboard'}
