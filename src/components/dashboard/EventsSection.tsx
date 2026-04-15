@@ -2,6 +2,21 @@
 
 import { IslandEvent, CATEGORY_CONFIG, BOOST_LABEL } from '@/lib/demandEvents'
 
+// ソースURLのドメインを実際のリンクURLに変換
+function sourceToUrl(source: string): string | null {
+  if (!source || source === 'claude-knowledge') return null
+  const map: Record<string, string> = {
+    'okinawastory.jp': 'https://www.okinawastory.jp/event/list?area=34',
+    'yaenavi.com': 'http://yaenavi.com/calendar',
+    'nacru.my.site.com': 'https://nacru.my.site.com/s/?NHCR_ApplicationPublic__c-filterId=View5',
+  }
+  return map[source] ?? `https://${source}`
+}
+
+function sourceDomain(source: string): string {
+  return source.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+}
+
 type Props = {
   events: IslandEvent[]
   lang: string
@@ -116,6 +131,26 @@ export default function EventsSection({ events, lang }: Props) {
                     </span>
                   )}
                 </div>
+                {/* 説明文 */}
+                {ev.note && (
+                  <p className="text-[9px] text-stone-500 mt-1 leading-relaxed line-clamp-2">
+                    {ev.note}
+                  </p>
+                )}
+                {/* ソースリンク */}
+                {ev.source_url && ev.source_url !== 'claude-knowledge' && (() => {
+                  const href = sourceToUrl(ev.source_url)
+                  return href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-[9px] text-blue-400 hover:text-blue-600 mt-0.5"
+                    >
+                      🔗 {sourceDomain(ev.source_url)}
+                    </a>
+                  ) : null
+                })()}
               </div>
 
               {/* 需要ブーストバー */}
