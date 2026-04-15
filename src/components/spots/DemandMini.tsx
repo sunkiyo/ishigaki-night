@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import type { DemandSummary } from '@/lib/demand'
 
 // スポット一覧・詳細で使うコンパクト需要バッジ
@@ -84,13 +83,12 @@ export default function DemandMini({
       <span style={{ color: cfg.color, fontWeight: 600 }}>{mainLabel}</span>
       <span style={{ color: cfg.color, opacity: 0.75 }}>·</span>
       <span style={{ color: cfg.color, opacity: 0.85 }}>{subLabel}</span>
-      <Link
-        href={`/${locale}/dashboard`}
-        className="ml-1 opacity-50 hover:opacity-100 transition-opacity"
-        style={{ color: cfg.color, textDecoration: 'underline', fontSize: 10 }}
+      <span
+        className="ml-1 opacity-50"
+        style={{ color: cfg.color, fontSize: 10 }}
       >
         {linkLabel} →
-      </Link>
+      </span>
     </div>
   )
 }

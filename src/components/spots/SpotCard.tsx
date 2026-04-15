@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Spot } from '@/lib/spots'
 import type { DemandSummary } from '@/lib/demand'
 import DemandMini from '@/components/spots/DemandMini'
@@ -25,19 +26,33 @@ export default function SpotCard({ spot, locale, demand }: { spot: Spot; locale:
       style={{ border: '1px solid rgb(var(--gold)/.2)' }}
     >
       {/* サムネイル */}
-      <div className="h-40 flex items-center justify-center relative overflow-hidden" style={{ background: 'rgb(var(--gold)/.1)' }}>
-        <span className="text-6xl">{spot.thumb}</span>
+      <div className="h-44 flex items-center justify-center relative overflow-hidden" style={{ background: 'rgb(var(--gold)/.1)' }}>
+        {spot.thumb.startsWith('http') || spot.thumb.startsWith('/') ? (
+          <Image
+            src={spot.thumb}
+            alt={spot.name}
+            fill
+            sizes="(max-width: 768px) 100vw, 400px"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <span className="text-6xl">{spot.thumb}</span>
+        )}
+        {/* 暗めオーバーレイ（写真の場合） */}
+        {(spot.thumb.startsWith('http') || spot.thumb.startsWith('/')) && (
+          <div className="absolute inset-0 bg-black/20" />
+        )}
         {spot.featured && (
-          <span className="absolute top-3 left-3 text-xs bg-gold text-white px-2 py-0.5 rounded font-medium">
+          <span className="absolute top-3 left-3 text-xs bg-gold text-white px-2 py-0.5 rounded font-medium z-10">
             PICK UP
           </span>
         )}
         {spot.coupon && (
-          <span className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded font-medium" style={{ background: 'rgb(var(--gold)/.15)', color: 'rgb(var(--gold))', border: '1px solid rgb(var(--gold)/.3)' }}>
+          <span className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded font-medium z-10" style={{ background: 'rgb(var(--gold)/.15)', color: 'rgb(var(--gold))', border: '1px solid rgb(var(--gold)/.3)' }}>
             COUPON
           </span>
         )}
-        <span className="absolute bottom-2 right-3 text-xs font-medium" style={{ color: 'rgb(var(--gold))' }}>
+        <span className="absolute bottom-2 right-3 text-xs font-medium z-10" style={{ color: 'rgb(var(--gold))' }}>
           {spot.priceRange}
         </span>
       </div>
